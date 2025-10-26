@@ -1,4 +1,4 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{Addr, CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -20,7 +20,16 @@ pub enum ContractError {
     CheckedFromRatioError(#[from] CheckedFromRatioError),
 
     #[error("Must be called by WAVS operators")]
-    Unauthorized {},
+    Unauthorized,
+
+    #[error("Trying to send 0 tokens")]
+    ZeroSend,
+
+    #[error("TG Handle {0} is already registered")]
+    TgAlreadyRegistered(String),
+
+    #[error("Address {0} is already registered")]
+    AddrAlreadyRegistered(Addr),
 
     #[error("Token not whitelisted: {token}")]
     TokenNotWhitelisted { token: String },

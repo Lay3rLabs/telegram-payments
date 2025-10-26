@@ -3,17 +3,12 @@ use cosmwasm_std::{Addr, Coin};
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
+#[derive(Default)]
 pub struct PendingPayments {
     payments: Vec<Coin>,
 }
 
 impl PendingPayments {
-    pub fn new() -> Self {
-        Self {
-            payments: Vec::new(),
-        }
-    }
-
     /// Only safe way to add.
     pub fn add_payment(&mut self, payment: Coin) {
         // TODO: add some sanity check (payment.amount > 0)

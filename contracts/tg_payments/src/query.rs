@@ -2,7 +2,7 @@ use crate::msg::{ChainAddrResponse, ServiceManagerResponse, TgHandleResponse};
 use crate::state::{
     ALLOWED_DENOMS, FUNDED_ACCOUNTS, OPEN_ACCOUNTS, PENDING_PAYMENTS, SERVICE_MANAGER,
 };
-use cosmwasm_std::{Coin, Decimal, Deps, StdResult, Uint128};
+use cosmwasm_std::{Coin, Deps, StdResult};
 
 pub fn addr_by_tg(deps: Deps, handle: String) -> StdResult<ChainAddrResponse> {
     let addr = OPEN_ACCOUNTS
