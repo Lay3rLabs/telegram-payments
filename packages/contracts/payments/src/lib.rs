@@ -4,10 +4,13 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
-use tg_contract_api::payments::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use tg_contract_api::payments::msg::{Auth, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use wavs_types::contracts::cosmwasm::service_handler::{
+    ServiceHandlerExecuteMessages, ServiceHandlerQueryMessages,
+};
 
 use crate::error::ContractError;
-use crate::state::{ALLOWED_DENOMS, SERVICE_MANAGER};
+use crate::state::{ADMIN, ALLOWED_DENOMS, SERVICE_MANAGER};
 
 mod error;
 mod execute;
@@ -26,15 +29,25 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // Set service manager for later validation
-    let service_manager_addr = deps.api.addr_validate(&msg.service_manager)?;
-    SERVICE_MANAGER.save(deps.storage, &service_manager_addr)?;
+    let mut resp = Response::new().add_attribute("method", "instantiate");
+
+    // Set admin or service manager for later validation
+    match msg.auth {
+        Auth::ServiceManager(service_manager) => {
+            let service_manager_addr = deps.api.addr_validate(&service_manager)?;
+            SERVICE_MANAGER.save(deps.storage, &service_manager_addr)?;
+            resp = resp.add_attribute("service_manager", service_manager);
+        }
+        Auth::Admin(admin) => {
+            let admin_addr = deps.api.addr_validate(&admin)?;
+            ADMIN.save(deps.storage, &admin_addr)?;
+            resp = resp.add_attribute("admin", admin);
+        }
+    }
 
     ALLOWED_DENOMS.save(deps.storage, &msg.allowed_denoms)?;
 
-    Ok(Response::new()
-        .add_attribute("method", "instantiate")
-        .add_attribute("service_manager", msg.service_manager))
+    Ok(resp)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -45,19 +58,17 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::RegisterReceive {
-            tg_handle,
-            chain_addr,
-        } => execute::register_receive(deps, env, info, tg_handle, chain_addr),
+        ExecuteMsg::RegisterReceive(msg) => execute::register_receive(deps, env, info, msg),
         ExecuteMsg::RegisterSend { tg_handle } => {
             execute::register_send(deps, env, info, tg_handle)
         }
-        ExecuteMsg::SendPayment {
-            from_tg,
-            to_tg,
-            amount,
-            denom,
-        } => execute::send_payment(deps, env, info, from_tg, to_tg, amount, denom),
+        ExecuteMsg::SendPayment(msg) => execute::send_payment(deps, env, info, msg),
+        ExecuteMsg::Wavs(msg) => match msg {
+            ServiceHandlerExecuteMessages::WavsHandleSignedEnvelope {
+                envelope,
+                signature_data,
+            } => execute::wavs_handle_envelope(deps, env, info, envelope, signature_data),
+        },
     }
 }
 
@@ -66,11 +77,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::AddrByTg { handle } => to_json_binary(&query::addr_by_tg(deps, handle)?),
         QueryMsg::TgByAddr { account } => to_json_binary(&query::tg_by_addr(deps, account)?),
-        QueryMsg::ServiceManager {} => to_json_binary(&query::service_manager(deps)?),
+        QueryMsg::Admin {} => to_json_binary(&query::admin(deps)?),
         QueryMsg::PendingPayments { handle } => {
             to_json_binary(&query::pending_payments(deps, handle)?)
         }
         QueryMsg::AllowedDenoms {} => to_json_binary(&query::allowed_denoms(deps)?),
+        QueryMsg::Wavs(msg) => match msg {
+            ServiceHandlerQueryMessages::WavsServiceManager {} => {
+                to_json_binary(&query::wavs_service_manager(deps)?)
+            }
+        },
     }
 }
 
