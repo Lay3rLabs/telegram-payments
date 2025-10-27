@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { getStoredAccount, clearAccount } from '../services/storage';
 import type { StoredAccount } from '../services/storage';
+import { getNeutronBalance, type NeutronBalance } from '../services/neutron';
 import { showAlert, showConfirm, hapticImpact, hapticNotification } from '../utils/telegram';
 import './Dashboard.css';
 
@@ -11,12 +12,24 @@ interface DashboardProps {
 
 export function Dashboard({ onLogout }: DashboardProps) {
   const [account, setAccount] = useState<StoredAccount | null>(null);
+  const [balance, setBalance] = useState<NeutronBalance | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [telegramUser, setTelegramUser] = useState<any>(null);
 
   useEffect(() => {
     const storedAccount = getStoredAccount();
     setAccount(storedAccount);
+
+    // Get Telegram user info
+    const user = WebApp.initDataUnsafe.user;
+    setTelegramUser(user);
+
+    // Fetch Neutron balance
+    if (storedAccount) {
+      fetchBalance(storedAccount.address);
+    }
 
     // Setup Settings Button
     WebApp.SettingsButton.show();
@@ -28,9 +41,26 @@ export function Dashboard({ onLogout }: DashboardProps) {
     };
   }, []);
 
+  const fetchBalance = async (address: string) => {
+    setLoadingBalance(true);
+    try {
+      const neutronBalance = await getNeutronBalance(address);
+      setBalance(neutronBalance);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
   const handleSettingsClick = () => {
     hapticImpact('light');
     setShowMenu(true);
+  };
+
+  const handleRefreshBalance = () => {
+    if (account) {
+      hapticImpact('light');
+      fetchBalance(account.address);
+    }
   };
 
   const handleLogout = () => {
@@ -69,11 +99,39 @@ export function Dashboard({ onLogout }: DashboardProps) {
   return (
     <div className="dashboard">
       <div className="dashboard-card">
-        <h1>Your Account</h1>
+        <h1>Neutron Wallet</h1>
 
         <div className="account-info">
+          {telegramUser && (
+            <div className="info-section">
+              <label>Telegram ID</label>
+              <div className="info-value">
+                {telegramUser.id}
+                {telegramUser.username && (
+                  <span style={{ marginLeft: '8px', color: 'var(--tg-theme-hint-color, #999)' }}>
+                    @{telegramUser.username}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="info-section">
-            <label>Address</label>
+            <label>Neutron Balance</label>
+            <div className="balance-display">
+              {loadingBalance ? (
+                <span>Loading...</span>
+              ) : (
+                <span className="balance-amount">{balance?.formatted || '0 NTRN'}</span>
+              )}
+              <button className="refresh-button" onClick={handleRefreshBalance} disabled={loadingBalance}>
+                🔄
+              </button>
+            </div>
+          </div>
+
+          <div className="info-section">
+            <label>Neutron Address</label>
             <div className="address-display">
               <code>{account.address}</code>
               <button className="copy-button" onClick={copyAddress}>
@@ -81,23 +139,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </button>
             </div>
           </div>
-
-          <div className="info-section">
-            <label>Created</label>
-            <div className="created-date">
-              {new Date(account.createdAt).toLocaleDateString()}
-            </div>
-          </div>
-        </div>
-
-        <div className="placeholder-section">
-          <h3>Coming Soon</h3>
-          <ul>
-            <li>Send payments to Telegram users</li>
-            <li>Receive payment notifications</li>
-            <li>View transaction history</li>
-            <li>Manage multiple assets</li>
-          </ul>
         </div>
 
         <div className="action-buttons">

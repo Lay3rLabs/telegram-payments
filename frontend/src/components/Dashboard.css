@@ -67,6 +67,48 @@
   font-size: 14px;
 }
 
+.info-value {
+  color: var(--tg-theme-text-color, #000000);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.balance-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.balance-amount {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.refresh-button {
+  padding: 6px 10px;
+  background: var(--tg-theme-button-color, #3390ec);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.refresh-button:hover {
+  opacity: 0.9;
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .placeholder-section {
   background: var(--tg-theme-secondary-bg-color, #f8f9fa);
   border-radius: 8px;

@@ -202,7 +202,7 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
       // Wait a bit for the session to propagate
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const account = await checkForNewSession('cosmoshub-4');
+      const account = await checkForNewSession('neutron-1');
 
       if (account) {
         setDebugInfo(`Found: ${account.address.substring(0, 20)}...`);
