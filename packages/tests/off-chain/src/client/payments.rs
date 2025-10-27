@@ -11,9 +11,12 @@ pub struct PaymentsClient {
 }
 
 impl PaymentsClient {
-    pub fn new(app_client: AppClient, admin: Option<Addr>) -> Self {
-        let admin = admin.unwrap_or(app_client.admin());
+    pub fn new(app_client: AppClient) -> Self {
+        let admin = app_client.admin();
+        Self::new_with_admin(app_client, admin)
+    }
 
+    pub fn new_with_admin(app_client: AppClient, admin: Addr) -> Self {
         let contract = ContractWrapper::new(
             tg_contract_payments::execute,
             tg_contract_payments::instantiate,

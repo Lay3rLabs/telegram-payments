@@ -6,7 +6,7 @@ async fn get_admin() {
     tracing_init();
 
     let app_client = AppClient::new("admin");
-    let payments = PaymentsClient::new(app_client.clone(), None);
+    let payments = PaymentsClient::new(app_client.clone());
 
     let admin = payments.querier.admin().await.unwrap().unwrap();
 
@@ -18,7 +18,7 @@ async fn register_receive_creates_open_account() {
     tracing_init();
 
     let app_client = AppClient::new("admin");
-    let payments = PaymentsClient::new(app_client.clone(), None);
+    let payments = PaymentsClient::new(app_client.clone());
 
     let user_addr = app_client.with_app(|app| app.api().addr_make("user123"));
     let tg_handle = "@alice".to_string();
@@ -59,7 +59,7 @@ async fn register_receive_prevents_duplicate_tg_handle() {
     tracing_init();
 
     let app_client = AppClient::new("admin");
-    let payments = PaymentsClient::new(app_client.clone(), None);
+    let payments = PaymentsClient::new(app_client.clone());
 
     let user1_addr = app_client.with_app(|app| app.api().addr_make("user1"));
     let user2_addr = app_client.with_app(|app| app.api().addr_make("user2"));
@@ -95,7 +95,7 @@ async fn register_receive_requires_admin() {
     let app_client = AppClient::new("admin");
     let unauthorized = app_client.with_app(|app| app.api().addr_make("unauthorized"));
 
-    let payments = PaymentsClient::new(app_client.clone(), Some(unauthorized));
+    let payments = PaymentsClient::new_with_admin(app_client.clone(), unauthorized);
 
     let user_addr = app_client.with_app(|app| app.api().addr_make("user123"));
 
@@ -120,7 +120,7 @@ async fn query_nonexistent_accounts() {
     tracing_init();
 
     let app_client = AppClient::new("admin");
-    let payments = PaymentsClient::new(app_client.clone(), None);
+    let payments = PaymentsClient::new(app_client.clone());
 
     let tg_handle = "@alice".to_string();
 
@@ -154,7 +154,7 @@ async fn allowed_denoms() {
     tracing_init();
 
     let app_client = AppClient::new("admin");
-    let payments = PaymentsClient::new(app_client.clone(), None);
+    let payments = PaymentsClient::new(app_client.clone());
 
     let mut allowed_denoms = payments.querier.allowed_denoms().await.unwrap();
     allowed_denoms.sort();
