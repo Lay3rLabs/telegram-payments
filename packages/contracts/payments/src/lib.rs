@@ -17,6 +17,9 @@ mod execute;
 mod query;
 mod state;
 
+#[cfg(test)]
+mod tests;
+
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 

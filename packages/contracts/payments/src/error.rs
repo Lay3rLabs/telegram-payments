@@ -19,7 +19,7 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedFromRatioError(#[from] CheckedFromRatioError),
 
-    #[error("Must be called by WAVS operators")]
+    #[error("Unauthorized")]
     Unauthorized,
 
     #[error("Trying to send 0 tokens")]
