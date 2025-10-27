@@ -10,23 +10,23 @@ prometheus = "http://localhost:9090"
 # Chain configurations
 # ----------------------------
 
-# Juno testnet: https://github.com/cosmos/chain-registry/blob/master/testnets/junotestnet/chain.json
+# Neutron testnet: https://github.com/cosmos/chain-registry/blob/master/testnets/neutrontestnet/chain.json
 # This must match the starship config in `backend/starship/chains.yml`
-[default.chains.cosmos.uni-7]
-bech32_prefix = "juno"
+[default.chains.cosmos.pion-1]
+bech32_prefix = "neutron"
 rpc_endpoint = "http://localhost:27657"
 grpc_endpoint = "http://localhost:9090"
 gas_price = 0.025
-gas_denom = "ujuno"
+gas_denom = "untrn"
 
-[default.chains.dev.docker-uni-7]
+[default.chains.dev.docker-pion-1]
 type = "cosmos"
-chain_id = "uni-7"
-bech32_prefix = "juno"
+chain_id = "pion-1"
+bech32_prefix = "neutron"
 rpc_endpoint = "http://host.docker.internal:27657"
 grpc_endpoint = "http://host.docker.internal:9090"
 gas_price = 0.025
-gas_denom = "ujuno"
+gas_denom = "untrn"
 
 # ----------------------------
 # WAVS specific settings

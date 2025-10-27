@@ -1,4 +1,5 @@
 use off_chain_tests::client::{payments::PaymentsClient, AppClient};
+use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
 use tg_utils::tracing::tracing_init;
 
 #[tokio::test]
@@ -8,9 +9,9 @@ async fn get_admin() {
     let app_client = AppClient::new("admin");
     let payments = PaymentsClient::new(app_client.clone());
 
-    let admin = payments.querier.admin().await.unwrap().unwrap();
+    let admin = app_client.admin().to_string();
 
-    assert_eq!(admin, app_client.admin().to_string());
+    shared_tests::payments::get_admin(&payments.querier, &admin).await;
 }
 
 #[tokio::test]
@@ -20,38 +21,15 @@ async fn register_receive_creates_open_account() {
     let app_client = AppClient::new("admin");
     let payments = PaymentsClient::new(app_client.clone());
 
-    let user_addr = app_client.with_app(|app| app.api().addr_make("user123"));
-    let tg_handle = "@alice".to_string();
-
-    // Register user to receive payments
-    payments
-        .executor
-        .register_receive(tg_handle.clone(), user_addr.clone())
-        .await
-        .unwrap();
-
-    // Query by Telegram handle - should return the registered address
-    assert_eq!(
-        payments
-            .querier
-            .addr_by_tg_handle(tg_handle)
-            .await
-            .unwrap()
-            .unwrap(),
-        user_addr.to_string()
-    );
-
-    // Query by address - should return None because this is only an OPEN account, not FUNDED
-
-    assert_eq!(
-        payments
-            .querier
-            .tg_handle_by_addr(user_addr.to_string())
-            .await
-            .unwrap(),
-        None,
-        "User should not be in FUNDED_ACCOUNTS yet"
-    );
+    shared_tests::payments::register_recieves_open_account(
+        &payments.querier,
+        &payments.executor,
+        RegisterReceivesOpenAccountProps {
+            user_addr: app_client.with_app(|app| app.api().addr_make("user123")),
+            tg_handle: "@alice".to_string(),
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

@@ -23,3 +23,18 @@ tasks:
       - cd packages/tests/off-chain && cargo test
       - for: { var: ALL_CONTRACTS }
         cmd: cd packages/contracts/{{.CONTRACT}} && cargo test
+
+  contract-on-chain:
+    requires:
+      vars: [CONTRACT]
+    vars:
+      CONTRACT_SRC_NAME:
+        sh: task contracts:src-name CONTRACT_KIND={{.CONTRACT}}
+    cmds:
+      - echo "Testing {{.CONTRACT}} on-chain"
+      - cd packages/tests/on-chain && cargo test --test {{.CONTRACT_SRC_NAME}}
+
+  on-chain:
+    cmds:
+      - echo "Testing on-chain"
+      - cd packages/tests/on-chain && cargo test
