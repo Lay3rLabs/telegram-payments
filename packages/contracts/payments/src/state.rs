@@ -11,12 +11,18 @@ pub struct PendingPayments {
 impl PendingPayments {
     /// Only safe way to add.
     pub fn add_payment(&mut self, payment: Coin) {
-        // TODO: add some sanity check (payment.amount > 0)
+        // Sanity check: amount must be greater than zero
+        if payment.amount.is_zero() {
+            return;
+        }
+
         // check if there is an existing entry with this denom and combine them
         if let Some(i) = self.payments.iter().position(|p| p.denom == payment.denom) {
             self.payments[i].amount += payment.amount;
         } else {
-            self.payments.push(payment);
+            // Insert in alphabetically sorted position
+            let insert_pos = self.payments.iter().position(|p| p.denom > payment.denom).unwrap_or(self.payments.len());
+            self.payments.insert(insert_pos, payment);
         }
     }
 
@@ -41,3 +47,32 @@ pub const ALLOWED_DENOMS: Item<Vec<String>> = Item::new("allowed_denoms");
 pub const SERVICE_MANAGER: Item<Addr> = Item::new("service_manager");
 /// Only set in the test approach
 pub const ADMIN: Item<Addr> = Item::new("admin");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::Uint256;
+
+    #[test]
+    fn test_one_pending_payment() {
+       let mut pending = PendingPayments::default();
+        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
+        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() }]);
+    }
+
+    #[test]
+    fn test_duplicate_denom() {
+       let mut pending = PendingPayments::default();
+        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
+        pending.add_payment(Coin { amount: Uint256::from(200u128), denom: "uusd".to_string() });
+        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(300u128), denom: "uusd".to_string() }]);
+    }
+
+    #[test]
+    fn test_sorting_denoms() {
+       let mut pending = PendingPayments::default();
+        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
+        pending.add_payment(Coin { amount: Uint256::from(200u128), denom: "ntrn".to_string() });
+        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(200u128), denom: "ntrn".to_string() }, Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() }]);
+    }
+}
