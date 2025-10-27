@@ -17,7 +17,7 @@ export interface KeyPair {
  * Generates a real Cosmos wallet with mnemonic
  */
 export async function generateKeyPair(
-  prefix: string = "cosmos"
+  prefix: string = "neutron"
 ): Promise<KeyPair> {
   // Generate wallet with 24-word mnemonic
   const wallet = await DirectSecp256k1HdWallet.generate(24, { prefix });
@@ -42,7 +42,7 @@ export async function generateKeyPair(
  */
 export async function importKeyPair(
   mnemonic: string,
-  prefix: string = "cosmos"
+  prefix: string = "neutron"
 ): Promise<KeyPair> {
   // Restore wallet from mnemonic
   const wallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
@@ -66,7 +66,7 @@ export async function importKeyPair(
  */
 export function isValidAddress(
   address: string,
-  expectedPrefix: string = "cosmos"
+  expectedPrefix: string = "neutron"
 ): boolean {
   try {
     const { prefix, data } = fromBech32(address);
