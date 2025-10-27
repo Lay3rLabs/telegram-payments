@@ -102,10 +102,19 @@ pub fn _register_receive(
     }
     OPEN_ACCOUNTS.save(deps.storage, &tg_handle, &chain_addr)?;
 
-    // TODO: check if there are any pending payments for this tg_handle and send them
+    let mut resp = Response::new().add_attribute("method", "register_receive");
 
-    Ok(Response::new()
-        .add_attribute("method", "register_receive")
+    // TODO: check if there are any pending payments for this tg_handle and send them
+    if let Some(pending) = PENDING_PAYMENTS.may_load(deps.storage, &tg_handle)? {
+        PENDING_PAYMENTS.remove(deps.storage, &tg_handle);
+        let msg = BankMsg::Send {
+            to_address: chain_addr.to_string(),
+            amount: pending.balance(),
+        };
+        resp = resp.add_message(msg);
+    }
+
+    Ok(resp
         .add_attribute("tg_handle", tg_handle)
         .add_attribute("chain_addr", chain_addr))
 }
