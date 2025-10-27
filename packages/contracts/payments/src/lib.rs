@@ -77,12 +77,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::AddrByTg { handle } => to_json_binary(&query::addr_by_tg(deps, handle)?),
         QueryMsg::TgByAddr { account } => to_json_binary(&query::tg_by_addr(deps, account)?),
-        QueryMsg::ServiceManager {} => to_json_binary(&query::service_manager(deps)?),
+        QueryMsg::Admin {} => to_json_binary(&query::admin(deps)?),
         QueryMsg::PendingPayments { handle } => {
             to_json_binary(&query::pending_payments(deps, handle)?)
         }
         QueryMsg::AllowedDenoms {} => to_json_binary(&query::allowed_denoms(deps)?),
-        QueryMsg::Wavs(msg) => query::wavs(deps, msg),
+        QueryMsg::Wavs(msg) => match msg {
+            ServiceHandlerQueryMessages::WavsServiceManager {} => {
+                to_json_binary(&query::wavs_service_manager(deps)?)
+            }
+        },
     }
 }
 

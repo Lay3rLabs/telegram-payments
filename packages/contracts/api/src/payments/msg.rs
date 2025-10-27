@@ -26,8 +26,8 @@ pub enum QueryMsg {
     AddrByTg { handle: String },
     #[returns(TgHandleResponse)]
     TgByAddr { account: String },
-    #[returns(ServiceManagerResponse)]
-    ServiceManager {},
+    #[returns(AdminResponse)]
+    Admin {},
     #[returns(Vec<Coin>)]
     PendingPayments { handle: String },
     #[returns(Vec<String>)]
@@ -80,8 +80,8 @@ pub struct ChainAddrResponse {
 }
 
 #[cw_serde]
-pub struct ServiceManagerResponse {
-    pub service_manager: String,
+pub struct AdminResponse {
+    pub admin: Option<String>,
 }
 
 #[cw_serde]
