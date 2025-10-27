@@ -25,6 +25,8 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 cw-utils = { workspace = true }
 wavs-types = { workspace = true }
+layer-climb-proto = { workspace = true }
+
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
