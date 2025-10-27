@@ -18,7 +18,6 @@ pub enum Auth {
     Admin(String),
 }
 
-
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
@@ -42,9 +41,11 @@ pub enum ExecuteMsg {
     /// Must be called by WAVS operators
     RegisterReceive(RegisterReceiveMsg),
     /// Must be called by WAVS operators
-    SendPayment(SendPaymentMsg), 
+    SendPayment(SendPaymentMsg),
     /// Called directly by the blockchain account authorizing payments
-    RegisterSend { tg_handle: String },
+    RegisterSend {
+        tg_handle: String,
+    },
     // #[serde(untagged)]
     Wavs(ServiceHandlerExecuteMessages),
 }

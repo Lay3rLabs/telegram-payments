@@ -36,7 +36,21 @@ impl AppClient {
         }
     }
 
-    pub fn app(&self) -> Rc<RefCell<App>> {
+    pub fn with_app<T>(&self, f: impl FnOnce(&App) -> T) -> T {
+        match &self.executor {
+            AnyExecutor::MultiTest { app, .. } => f(&*app.borrow()),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn with_app_mut<T>(&self, f: impl FnOnce(&mut App) -> T) -> T {
+        match &self.executor {
+            AnyExecutor::MultiTest { app, .. } => f(&mut *app.borrow_mut()),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn clone_app(&self) -> Rc<RefCell<App>> {
         match &self.executor {
             AnyExecutor::MultiTest { app, .. } => app.clone(),
             _ => unreachable!(),

@@ -27,8 +27,5 @@ wavs-types = { workspace = true }
 layer-climb-proto = { workspace = true }
 
 
-[dev-dependencies]
-cw-multi-test = { workspace = true }
-
 [features]
 library = []

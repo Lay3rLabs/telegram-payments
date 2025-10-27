@@ -1,5 +1,7 @@
 //! Abstractions for different backends (Climb, Climb Pool, MultiTest)
 //! Provides AnyQuerier and AnyExecutor to represent _any_ contract querier/executor
+//! The idea is that by moving the heavy-lifting here, we're free to write higher-level code
+//! that provides an idiomatic and clean API
 pub mod payments;
 
 #[cfg(feature = "multitest")]
@@ -119,7 +121,7 @@ impl AnyExecutor {
         address: &Addr,
         msg: &MSG,
         funds: &[cosmwasm_std::Coin],
-    ) -> Result<WavsTxResponse, cosmwasm_std::StdError> {
+    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
         match self {
             Self::Climb(client) => {
                 let addr = Address::try_from(address)
@@ -136,7 +138,7 @@ impl AnyExecutor {
                     .contract_execute(&addr, msg, funds, None)
                     .await
                     .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
-                    .map(WavsTxResponse::Climb)
+                    .map(AnyTxResponse::Climb)
             }
             #[cfg(feature = "climb_pool")]
             Self::ClimbPool(pool) => {
@@ -158,35 +160,36 @@ impl AnyExecutor {
                     .contract_execute(&addr, msg, funds, None)
                     .await
                     .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
-                    .map(WavsTxResponse::Climb)
+                    .map(AnyTxResponse::Climb)
             }
             #[cfg(feature = "multitest")]
             Self::MultiTest { app, admin } => app
                 .borrow_mut()
                 .execute_contract(admin.clone(), address.clone(), msg, funds)
-                .map(WavsTxResponse::MultiTest),
+                .map(AnyTxResponse::MultiTest),
         }
     }
 }
 
+#[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
-pub enum WavsTxResponse {
+pub enum AnyTxResponse {
     Climb(layer_climb::proto::abci::TxResponse),
     #[cfg(feature = "multitest")]
     MultiTest(cw_multi_test::AppResponse),
 }
 
-impl<'a> From<&'a WavsTxResponse> for CosmosTxEvents<'a> {
-    fn from(value: &'a WavsTxResponse) -> Self {
+impl<'a> From<&'a AnyTxResponse> for CosmosTxEvents<'a> {
+    fn from(value: &'a AnyTxResponse) -> Self {
         match value {
-            WavsTxResponse::Climb(resp) => CosmosTxEvents::from(resp),
+            AnyTxResponse::Climb(resp) => CosmosTxEvents::from(resp),
             #[cfg(feature = "multitest")]
-            WavsTxResponse::MultiTest(resp) => CosmosTxEvents::from(resp.events.as_slice()),
+            AnyTxResponse::MultiTest(resp) => CosmosTxEvents::from(resp.events.as_slice()),
         }
     }
 }
 
-impl WavsTxResponse {
+impl AnyTxResponse {
     pub fn unchecked_into_tx_response(self) -> layer_climb::proto::abci::TxResponse {
         match self {
             Self::Climb(tx_resp) => tx_resp,
