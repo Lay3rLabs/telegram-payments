@@ -197,8 +197,8 @@ fn test_register_receive_requires_admin() {
         .unwrap_err();
 
     assert!(
-        err.to_string().contains("Must be called by WAVS operators"),
-        "Expected Must be called by WAVS operators error, got: {}",
+        err.to_string().contains("Unauthorized"),
+        "Expected Unauthorized error, got: {}",
         err
     );
 }
