@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import WebApp from '@twa-dev/sdk'
 import { AccountCreation } from './components/AccountCreation'
 import { Dashboard } from './components/Dashboard'
+import { WalletConnect } from './pages/WalletConnect'
 import { hasAccount } from './services/storage'
 import './App.css'
 
 function App() {
   const [accountExists, setAccountExists] = useState<boolean>(false)
   const [isReady, setIsReady] = useState(false)
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
 
   useEffect(() => {
     // Initialize Telegram Web App
@@ -25,6 +27,13 @@ function App() {
     if (WebApp.initDataUnsafe.user) {
       console.log('Telegram User:', WebApp.initDataUnsafe.user)
     }
+
+    // Listen for path changes
+    const handlePathChange = () => {
+      setCurrentPath(window.location.pathname)
+    }
+    window.addEventListener('popstate', handlePathChange)
+    return () => window.removeEventListener('popstate', handlePathChange)
   }, [])
 
   const handleAccountCreated = () => {
@@ -44,6 +53,12 @@ function App() {
     )
   }
 
+  // Route for wallet connection redirect
+  if (currentPath === '/connect') {
+    return <WalletConnect />
+  }
+
+  // Main app routes
   return (
     <div className="app">
       {accountExists ? (

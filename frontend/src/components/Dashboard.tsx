@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
 import { getStoredAccount, clearAccount } from '../services/storage';
 import type { StoredAccount } from '../services/storage';
+import { showAlert, showConfirm, hapticImpact, hapticNotification } from '../utils/telegram';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -28,20 +29,20 @@ export function Dashboard({ onLogout }: DashboardProps) {
   }, []);
 
   const handleSettingsClick = () => {
-    WebApp.HapticFeedback.impactOccurred('light');
+    hapticImpact('light');
     setShowMenu(true);
   };
 
   const handleLogout = () => {
-    WebApp.showConfirm(
+    showConfirm(
       'Are you sure you want to remove this account? Make sure you have your private key saved!',
       (confirmed) => {
         if (confirmed) {
-          WebApp.HapticFeedback.notificationOccurred('success');
+          hapticNotification('success');
           clearAccount();
           onLogout();
         } else {
-          WebApp.HapticFeedback.impactOccurred('light');
+          hapticImpact('light');
         }
       }
     );
@@ -51,13 +52,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
     if (!account) return;
     try {
       await navigator.clipboard.writeText(account.address);
-      WebApp.HapticFeedback.notificationOccurred('success');
+      hapticNotification('success');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
-      WebApp.HapticFeedback.notificationOccurred('error');
-      WebApp.showAlert('Failed to copy to clipboard');
+      hapticNotification('error');
+      showAlert('Failed to copy to clipboard');
     }
   };
 
@@ -78,13 +79,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               <button className="copy-button" onClick={copyAddress}>
                 {copied ? '✓' : 'Copy'}
               </button>
-            </div>
-          </div>
-
-          <div className="info-section">
-            <label>Public Key</label>
-            <div className="key-display">
-              <code className="truncate">{account.publicKey}</code>
             </div>
           </div>
 
