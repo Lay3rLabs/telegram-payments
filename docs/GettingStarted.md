@@ -29,8 +29,11 @@ task components:build-all
 *off-chain*
 
 Test a specific contract off-chain
+
+Note that the name is the friendly name set in [config.yml](../taskfile/config.yml) without the `tg-contract` prefix
+
 ```bash
-task test:contract-off-chain CONTRACT=<contract-name>
+task test:contract-off-chain CONTRACT=payments
 ```
 
 All off-chain tests
@@ -46,7 +49,7 @@ It may take a while for the chain to startup, be patient... recommendation is to
 
 ```bash
 task backend:start-chains
- # alternatively `task test:contract-on-chain CONTRACT=<contract-name>`
+ # alternatively `task test:contract-on-chain CONTRACT=payments`
 task test:on-chain
 task backend:stop-chains
 ```
