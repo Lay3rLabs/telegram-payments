@@ -4944,6 +4944,7 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "layer-climb-proto",
  "schemars 1.0.4",
  "serde",
  "serde-json-wasm",

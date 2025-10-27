@@ -1,7 +1,8 @@
 use crate::state::{
     ADMIN, ALLOWED_DENOMS, FUNDED_ACCOUNTS, OPEN_ACCOUNTS, PENDING_PAYMENTS, SERVICE_MANAGER,
 };
-use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
+use cosmwasm_std::{ensure, AnyMsg, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
+use layer_climb_proto::{bank::MsgSend, Coin as ProtoCoin, Message, Name};
 use tg_contract_api::payments::msg::{RegisterReceiveMsg, SendPaymentMsg, WavsPayload};
 use wavs_types::contracts::cosmwasm::service_manager::ServiceManagerQueryMessages;
 use wavs_types::contracts::cosmwasm::{
@@ -102,10 +103,19 @@ pub fn _register_receive(
     }
     OPEN_ACCOUNTS.save(deps.storage, &tg_handle, &chain_addr)?;
 
-    // TODO: check if there are any pending payments for this tg_handle and send them
+    let mut resp = Response::new().add_attribute("method", "register_receive");
 
-    Ok(Response::new()
-        .add_attribute("method", "register_receive")
+    // TODO: check if there are any pending payments for this tg_handle and send them
+    if let Some(pending) = PENDING_PAYMENTS.may_load(deps.storage, &tg_handle)? {
+        PENDING_PAYMENTS.remove(deps.storage, &tg_handle);
+        let msg = BankMsg::Send {
+            to_address: chain_addr.to_string(),
+            amount: pending.balance(),
+        };
+        resp = resp.add_message(msg);
+    }
+
+    Ok(resp
         .add_attribute("tg_handle", tg_handle)
         .add_attribute("chain_addr", chain_addr))
 }
@@ -151,12 +161,19 @@ pub fn _send_payment(
         }
     };
 
-    // either send directly to receiver, or we send to self and keep
-    let msg = BankMsg::Send {
-        // TODO: how do we send from another account? StargateMsg???
-        // from_address: from_addr,
+    // We need to build a custom Any (protobuf) message to expose the power of sending from a different address
+    let send_val = ProtoCoin {
+        amount: amount.amount.to_string(),
+        denom: amount.denom.clone(),
+    };
+    let proto = MsgSend {
+        from_address: from_addr.to_string(),
         to_address: to_addr.to_string(),
-        amount: vec![amount.clone()],
+        amount: vec![send_val],
+    };
+    let msg = AnyMsg {
+        type_url: MsgSend::type_url(),
+        value: proto.encode_to_vec().into(),
     };
 
     Ok(Response::new()

@@ -85,16 +85,17 @@ layer-climb-address = { version = "0.8.3", features = [
 ] }
 layer-climb-config = "0.8.3"
 layer-climb-cli = "0.8.3"
+layer-climb-proto = "0.8.3"
 
 # CosmWasm
 cosmwasm-schema = "3.0.2"
-cosmwasm-std = { version = "=3.0.2", features = ["cosmwasm_1_2"] }
+cosmwasm-std = { version = "=3.0.2", features = ["cosmwasm_2_0"] }
 cw-storage-plus = "3.0.1"
 cw2 = "3.0.0"
 cw-multi-test = { version = "3.0.1", features = [
   "staking",
   "stargate",
-  "cosmwasm_1_2",
+  "cosmwasm_2_0",
 ] }
 cw-utils = "3.0.0"
 
