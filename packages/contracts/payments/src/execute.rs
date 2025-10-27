@@ -1,7 +1,7 @@
 use crate::state::{
     ALLOWED_DENOMS, FUNDED_ACCOUNTS, OPEN_ACCOUNTS, PENDING_PAYMENTS, SERVICE_MANAGER,
 };
-use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{ensure, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
 
 use crate::error::ContractError;
 
@@ -64,7 +64,7 @@ pub fn send_payment(
     info: MessageInfo,
     from_tg: String,
     to_tg: String,
-    amount: Uint128,
+    amount: Uint256,
     denom: String,
 ) -> Result<Response, ContractError> {
     // TODO: we probably need a much different way to really handle WAVS, but this is a placeholder
@@ -78,7 +78,7 @@ pub fn send_payment(
         ContractError::TokenNotWhitelisted { token: denom }
     );
     // Ensure amount > 0
-    ensure!(amount > Uint128::zero(), ContractError::ZeroSend);
+    ensure!(amount > Uint256::zero(), ContractError::ZeroSend);
     let amount = Coin { amount, denom };
 
     // Ensure address this account is sending from

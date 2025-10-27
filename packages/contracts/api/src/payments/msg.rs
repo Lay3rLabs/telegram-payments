@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::{Coin, Uint256};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -33,7 +33,7 @@ pub enum ExecuteMsg {
     SendPayment {
         from_tg: String,
         to_tg: String,
-        amount: Uint128,
+        amount: Uint256,
         denom: String,
     },
     /// Called directly by the blockchain account authorizing payments
