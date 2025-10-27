@@ -38,12 +38,6 @@ pub enum CliCommand {
         addr: Option<String>,
         #[clap(flatten)]
         args: CliArgs,
-        #[arg(
-            long,
-            env = "FAUCET_URL",
-            default_value = "http://localhost:8001/credit"
-        )]
-        url: String,
     },
 }
 
