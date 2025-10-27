@@ -6,6 +6,10 @@ includes:
     flatten: true
 
 tasks:
-  hello:
+  start-chains:
     cmds:
-      - echo "Hello, World!"
+      - starship start --config "{{.STARSHIP_CHAIN_FILE}}"
+
+  stop-chains:
+    cmds:
+      - starship stop --config "{{.STARSHIP_CHAIN_FILE}}"

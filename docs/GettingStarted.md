@@ -37,7 +37,9 @@ task test:contracts-off-chain
 
 *on-chain*
 
-This requires first start the chains, running the tests, and then remembering to shut it down:
+This requires first start the chains, running the tests, and then remembering to shut it down
+
+Be patient when starting the chains, it can take a minute or two
 
 _STATUS: TODO_
 ```bash
