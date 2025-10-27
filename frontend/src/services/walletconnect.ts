@@ -4,9 +4,7 @@
  */
 
 import SignClient from "@walletconnect/sign-client";
-import type { SignClient as SignClientType } from "@walletconnect/sign-client";
 import type { SessionTypes } from "@walletconnect/types";
-import { toBase64 } from "@cosmjs/encoding";
 
 export interface WalletConnectAccount {
   address: string;
@@ -14,14 +12,13 @@ export interface WalletConnectAccount {
   walletName?: string;
 }
 
-let signClient: SignClientType | null = null;
+let signClient: SignClient | null = null;
 let currentSession: SessionTypes.Struct | null = null;
-let sessionCallbacks: Array<(session: SessionTypes.Struct) => void> = [];
 
 /**
  * Initialize WalletConnect SignClient
  */
-export async function initWalletConnect(): Promise<SignClientType> {
+export async function initWalletConnect(): Promise<SignClient> {
   if (signClient) {
     return signClient;
   }
@@ -73,6 +70,7 @@ export async function connectWalletConnect(
       });
     } catch (error) {
       // Ignore disconnect errors
+      console.error("Error disconnecting old session:", error);
     }
   }
   currentSession = null;
@@ -97,53 +95,53 @@ export async function connectWalletConnect(
 
   // Return URI immediately for QR code display
   // and a promise that resolves when connection is approved
-  const accountPromise = approval()
-    .then(async (session) => {
-      currentSession = session;
+  const accountPromise = approval().then(async (session) => {
+    currentSession = session;
 
-      // Get the account from the session
-      const cosmosNamespace = session.namespaces.cosmos;
-      if (
-        !cosmosNamespace ||
-        !cosmosNamespace.accounts ||
-        cosmosNamespace.accounts.length === 0
-      ) {
-        throw new Error("No Cosmos accounts found in session");
-      }
+    // Get the account from the session
+    const cosmosNamespace = session.namespaces.cosmos;
+    if (
+      !cosmosNamespace ||
+      !cosmosNamespace.accounts ||
+      cosmosNamespace.accounts.length === 0
+    ) {
+      throw new Error("No Cosmos accounts found in session");
+    }
 
-      // Parse the account (format: "cosmos:cosmoshub-4:cosmos1abc...")
-      const accountString = cosmosNamespace.accounts[0];
-      const address = accountString.split(":")[2];
+    // Parse the account (format: "cosmos:cosmoshub-4:cosmos1abc...")
+    const accountString = cosmosNamespace.accounts[0];
+    const address = accountString.split(":")[2];
 
-      // Get public key via cosmos_getAccounts method
-      try {
-        const accounts = await client.request<
-          Array<{ address: string; pubkey: string }>
-        >({
-          topic: session.topic,
-          chainId: `cosmos:${chainId}`,
-          request: {
-            method: "cosmos_getAccounts",
-            params: {},
-          },
-        });
+    // Get public key via cosmos_getAccounts method
+    try {
+      const accounts = await client.request<
+        Array<{ address: string; pubkey: string }>
+      >({
+        topic: session.topic,
+        chainId: `cosmos:${chainId}`,
+        request: {
+          method: "cosmos_getAccounts",
+          params: {},
+        },
+      });
 
-        const account = accounts.find((acc) => acc.address === address);
+      const account = accounts.find((acc) => acc.address === address);
 
-        return {
-          address,
-          publicKey: account?.pubkey || "",
-          walletName: session.peer.metadata.name,
-        };
-      } catch (error) {
-        // Fallback if we can't get pubkey
-        return {
-          address,
-          publicKey: "",
-          walletName: session.peer.metadata.name,
-        };
-      }
-    });
+      return {
+        address,
+        publicKey: account?.pubkey || "",
+        walletName: session.peer.metadata.name,
+      };
+    } catch (error) {
+      console.log("Failed to get public key from wallet:", error);
+      // Fallback if we can't get pubkey
+      return {
+        address,
+        publicKey: "",
+        walletName: session.peer.metadata.name,
+      };
+    }
+  });
 
   return {
     uri,
@@ -168,6 +166,7 @@ export async function disconnectWalletConnect(): Promise<void> {
       },
     });
   } catch (error) {
+    console.log("Error disconnecting WalletConnect session:", error);
     // Ignore disconnect errors
   } finally {
     currentSession = null;
@@ -191,7 +190,9 @@ export function isWalletConnectConnected(): boolean {
 /**
  * Check for new sessions and return account if found
  */
-export async function checkForNewSession(chainId: string = "neutron-1"): Promise<WalletConnectAccount | null> {
+export async function checkForNewSession(
+  chainId: string = "neutron-1"
+): Promise<WalletConnectAccount | null> {
   // Make sure client is initialized
   const client = await initWalletConnect();
 
@@ -211,17 +212,17 @@ export async function checkForNewSession(chainId: string = "neutron-1"): Promise
   const cosmosNamespace = session.namespaces.cosmos;
 
   if (!cosmosNamespace) {
-    let foundInfo = '';
-    availableNamespaces.forEach(ns => {
+    let foundInfo = "";
+    availableNamespaces.forEach((ns) => {
       const nsData = session.namespaces[ns];
       foundInfo += `${ns}: ${nsData.accounts?.length || 0} accounts; `;
     });
-    const error = `No cosmos namespace! Found: ${foundInfo || 'none'}`;
+    const error = `No cosmos namespace! Found: ${foundInfo || "none"}`;
     throw new Error(error);
   }
 
   if (!cosmosNamespace.accounts || cosmosNamespace.accounts.length === 0) {
-    throw new Error('No accounts in cosmos namespace');
+    throw new Error("No accounts in cosmos namespace");
   }
 
   const accountString = cosmosNamespace.accounts[0];
@@ -234,13 +235,15 @@ export async function checkForNewSession(chainId: string = "neutron-1"): Promise
   const address = addressParts[2];
 
   if (!address) {
-    throw new Error('Address is empty');
+    throw new Error("Address is empty");
   }
 
   // Try to get public key with timeout
   try {
     // Add a timeout to prevent hanging
-    const pubkeyPromise = client.request<Array<{ address: string; pubkey: string }>>({
+    const pubkeyPromise = client.request<
+      Array<{ address: string; pubkey: string }>
+    >({
       topic: session.topic,
       chainId: `cosmos:${chainId}`,
       request: {
@@ -250,7 +253,7 @@ export async function checkForNewSession(chainId: string = "neutron-1"): Promise
     });
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Pubkey request timeout')), 5000); // 5 second timeout
+      setTimeout(() => reject(new Error("Pubkey request timeout")), 5000); // 5 second timeout
     });
 
     const accounts = await Promise.race([pubkeyPromise, timeoutPromise]);
@@ -262,6 +265,7 @@ export async function checkForNewSession(chainId: string = "neutron-1"): Promise
       walletName: session.peer.metadata.name,
     };
   } catch (error) {
+    console.log("Failed to get public key from wallet:", error);
     // Fallback without pubkey - this is OK, we can still use the address
     return {
       address,
@@ -274,9 +278,27 @@ export async function checkForNewSession(chainId: string = "neutron-1"): Promise
 /**
  * Debug function to inspect WalletConnect storage
  */
-export async function debugWalletConnectStorage(): Promise<any> {
+export type DebugWalletConnectStorageResult =
+  | { error: string }
+  | {
+      sessionCount: number;
+      pairingCount: number;
+      sessions: {
+        topic: string;
+        peer: string;
+        expiry: string;
+        accounts: string[];
+      }[];
+      pairings: {
+        topic: string;
+        active: boolean;
+        expiry: string;
+      }[];
+    };
+
+export async function debugWalletConnectStorage(): Promise<DebugWalletConnectStorageResult> {
   if (!signClient) {
-    return { error: 'SignClient not initialized' };
+    return { error: "SignClient not initialized" };
   }
 
   const sessions = signClient.session.getAll();
@@ -285,13 +307,13 @@ export async function debugWalletConnectStorage(): Promise<any> {
   return {
     sessionCount: sessions.length,
     pairingCount: pairings.length,
-    sessions: sessions.map(s => ({
+    sessions: sessions.map((s) => ({
       topic: s.topic,
       peer: s.peer.metadata.name,
       expiry: new Date(s.expiry * 1000).toISOString(),
       accounts: s.namespaces.cosmos?.accounts || [],
     })),
-    pairings: pairings.map(p => ({
+    pairings: pairings.map((p) => ({
       topic: p.topic,
       active: p.active,
       expiry: new Date(p.expiry * 1000).toISOString(),
@@ -302,8 +324,11 @@ export async function debugWalletConnectStorage(): Promise<any> {
 /**
  * Get WalletConnect connection instructions for mobile
  */
-export function getWalletConnectionInstructions(walletType: 'keplr' | 'leap', wcUri: string) {
-  const walletName = walletType === 'keplr' ? 'Keplr' : 'Leap';
+export function getWalletConnectionInstructions(
+  walletType: "keplr" | "leap",
+  wcUri: string
+) {
+  const walletName = walletType === "keplr" ? "Keplr" : "Leap";
 
   return {
     walletName,
@@ -311,8 +336,8 @@ export function getWalletConnectionInstructions(walletType: 'keplr' | 'leap', wc
     steps: [
       `Open your ${walletName} app`,
       'Tap on "WalletConnect" or the scan icon',
-      'Look for the connection request from Telegram Payments',
-      'Approve the connection',
+      "Look for the connection request from Telegram Payments",
+      "Approve the connection",
     ],
   };
 }

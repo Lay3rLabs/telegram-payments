@@ -1,13 +1,27 @@
-import { useState, useEffect } from 'react';
-import WebApp from '@twa-dev/sdk';
-import { getStoredAccount, clearAccount } from '../services/storage';
-import type { StoredAccount } from '../services/storage';
-import { getNeutronBalance, type NeutronBalance } from '../services/neutron';
-import { showAlert, showConfirm, hapticImpact, hapticNotification } from '../utils/telegram';
-import './Dashboard.css';
+import { useState, useEffect } from "react";
+import WebApp from "@twa-dev/sdk";
+import { getStoredAccount, clearAccount } from "../services/storage";
+import type { StoredAccount } from "../services/storage";
+import { getNeutronBalance, type NeutronBalance } from "../services/neutron";
+import {
+  showAlert,
+  showConfirm,
+  hapticImpact,
+  hapticNotification,
+} from "../utils/telegram";
+import "./Dashboard.css";
 
 interface DashboardProps {
   onLogout: () => void;
+}
+
+interface TelegramUser {
+  id: number;
+  is_bot?: boolean;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
 }
 
 export function Dashboard({ onLogout }: DashboardProps) {
@@ -16,7 +30,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
 
   useEffect(() => {
     const storedAccount = getStoredAccount();
@@ -24,7 +38,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
     // Get Telegram user info
     const user = WebApp.initDataUnsafe.user;
-    setTelegramUser(user);
+    setTelegramUser(user ?? null);
 
     // Fetch Neutron balance
     if (storedAccount) {
@@ -52,27 +66,27 @@ export function Dashboard({ onLogout }: DashboardProps) {
   };
 
   const handleSettingsClick = () => {
-    hapticImpact('light');
+    hapticImpact("light");
     setShowMenu(true);
   };
 
   const handleRefreshBalance = () => {
     if (account) {
-      hapticImpact('light');
+      hapticImpact("light");
       fetchBalance(account.address);
     }
   };
 
   const handleLogout = () => {
     showConfirm(
-      'Are you sure you want to remove this account? Make sure you have your private key saved!',
+      "Are you sure you want to remove this account? Make sure you have your private key saved!",
       (confirmed) => {
         if (confirmed) {
-          hapticNotification('success');
+          hapticNotification("success");
           clearAccount();
           onLogout();
         } else {
-          hapticImpact('light');
+          hapticImpact("light");
         }
       }
     );
@@ -82,13 +96,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
     if (!account) return;
     try {
       await navigator.clipboard.writeText(account.address);
-      hapticNotification('success');
+      hapticNotification("success");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
-      hapticNotification('error');
-      showAlert('Failed to copy to clipboard');
+      console.error("Failed to copy:", err);
+      hapticNotification("error");
+      showAlert("Failed to copy to clipboard");
     }
   };
 
@@ -108,7 +122,12 @@ export function Dashboard({ onLogout }: DashboardProps) {
               <div className="info-value">
                 {telegramUser.id}
                 {telegramUser.username && (
-                  <span style={{ marginLeft: '8px', color: 'var(--tg-theme-hint-color, #999)' }}>
+                  <span
+                    style={{
+                      marginLeft: "8px",
+                      color: "var(--tg-theme-hint-color, #999)",
+                    }}
+                  >
                     @{telegramUser.username}
                   </span>
                 )}
@@ -122,9 +141,15 @@ export function Dashboard({ onLogout }: DashboardProps) {
               {loadingBalance ? (
                 <span>Loading...</span>
               ) : (
-                <span className="balance-amount">{balance?.formatted || '0 NTRN'}</span>
+                <span className="balance-amount">
+                  {balance?.formatted || "0 NTRN"}
+                </span>
               )}
-              <button className="refresh-button" onClick={handleRefreshBalance} disabled={loadingBalance}>
+              <button
+                className="refresh-button"
+                onClick={handleRefreshBalance}
+                disabled={loadingBalance}
+              >
                 🔄
               </button>
             </div>
@@ -135,7 +160,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             <div className="address-display">
               <code>{account.address}</code>
               <button className="copy-button" onClick={copyAddress}>
-                {copied ? '✓' : 'Copy'}
+                {copied ? "✓" : "Copy"}
               </button>
             </div>
           </div>
@@ -154,7 +179,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
       {showMenu && (
         <div className="settings-menu" onClick={() => setShowMenu(false)}>
-          <div className="settings-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="settings-content"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3>Settings</h3>
             <button className="menu-item" onClick={handleLogout}>
               🗑️ Remove Account

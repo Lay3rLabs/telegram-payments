@@ -11,12 +11,20 @@ export interface NeutronBalance {
   formatted: string; // Human readable amount in NTRN
 }
 
+type Balance = {
+  amount: string;
+  denom: string;
+};
 /**
  * Fetch Neutron balance for an address
  */
-export async function getNeutronBalance(address: string): Promise<NeutronBalance> {
+export async function getNeutronBalance(
+  address: string
+): Promise<NeutronBalance> {
   try {
-    const response = await fetch(`${NEUTRON_RPC}/cosmos/bank/v1beta1/balances/${address}`);
+    const response = await fetch(
+      `${NEUTRON_RPC}/cosmos/bank/v1beta1/balances/${address}`
+    );
 
     if (!response.ok) {
       // Account doesn't exist on chain yet, return 0 balance
@@ -30,7 +38,9 @@ export async function getNeutronBalance(address: string): Promise<NeutronBalance
     const data = await response.json();
 
     // Find NTRN balance
-    const ntrnBalance = data.balances?.find((b: any) => b.denom === NEUTRON_DENOM);
+    const ntrnBalance = data.balances?.find(
+      (b: Balance) => b.denom === NEUTRON_DENOM
+    );
 
     if (!ntrnBalance) {
       return {
@@ -50,6 +60,7 @@ export async function getNeutronBalance(address: string): Promise<NeutronBalance
       formatted: `${amountInNtrn.toFixed(6)} NTRN`,
     };
   } catch (error) {
+    console.log("Error fetching Neutron balance:", error);
     // Network error or other issue - return 0 balance
     return {
       amount: "0",
