@@ -6,6 +6,17 @@ includes:
     flatten: true
 
 tasks:
-  hello:
+  contract-off-chain:
+    requires:
+      vars: [CONTRACT]
+    vars:
+      CONTRACT_SRC_NAME:
+        sh: task contracts:src-name CONTRACT_KIND={{.CONTRACT}}
     cmds:
-      - echo "Hello, World!"
+      - echo "Testing {{.CONTRACT}} off-chain"
+      - cd packages/tests/off-chain && cargo test --test {{.CONTRACT_SRC_NAME}}
+
+  off-chain:
+    cmds:
+      - echo "Testing off-chain"
+      - cd packages/tests/off-chain && cargo test

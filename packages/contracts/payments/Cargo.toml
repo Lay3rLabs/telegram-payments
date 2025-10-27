@@ -10,7 +10,6 @@ publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-doctest = false
 
 [dependencies]
 tg-contract-api = { workspace = true }

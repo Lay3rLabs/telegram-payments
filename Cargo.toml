@@ -35,6 +35,7 @@ overflow-checks = true
 tg-contract-api = { path = "packages/contracts/api" }
 tg-utils = { path = "packages/utils" }
 tg-test-common = { path = "packages/tests/_common" }
+tg-contract-payments = { path = "packages/contracts/payments" }
 
 # WAVS
 wavs-types = { version = "=2.0.0-alpha.7", default-features = false, features = [

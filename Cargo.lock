@@ -3289,6 +3289,21 @@ dependencies = [
 [[package]]
 name = "off-chain-tests"
 version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "layer-climb-address",
+ "serde",
+ "tg-contract-api",
+ "tg-contract-payments",
+ "tg-test-common",
+ "tg-utils",
+ "tokio",
+ "tracing",
+ "wavs-types",
+]
 
 [[package]]
 name = "on-chain-tests"
@@ -4982,6 +4997,7 @@ dependencies = [
  "deadpool",
  "layer-climb",
  "serde",
+ "tg-contract-api",
  "tracing",
  "tracing-subscriber",
  "wavs-types",

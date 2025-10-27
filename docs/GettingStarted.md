@@ -29,10 +29,14 @@ task components:build-all
 
 *off-chain*
 
-_STATUS: TODO_
+Test a specific contract off-chain
 ```bash
-# Test the currently configured CONTRACT_KIND
-task test:contracts-off-chain
+task test:contract-off-chain CONTRACT=<contract-name>
+```
+
+All off-chain tests
+```bash
+task test:off-chain
 ```
 
 *on-chain*
