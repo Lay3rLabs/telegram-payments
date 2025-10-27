@@ -299,7 +299,7 @@ stateDiagram-v2
 ## Technology Stack
 
 ### Backend
-- **Telegram Bot**: Rust Axiom Server with Telegram Bot API
+- **Telegram Bot**: Rust Axum Server with Telegram Bot API
 - **WAVS Service**: Rust WASI Components
 
 ### Smart Contracts
