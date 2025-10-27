@@ -37,4 +37,7 @@ pub const PENDING_PAYMENTS: Map<&str, PendingPayments> = Map::new("pending_payme
 /// Which denoms we will accept for payments
 pub const ALLOWED_DENOMS: Item<Vec<String>> = Item::new("allowed_denoms");
 
+/// Only set if we take ServiceHandler interface
 pub const SERVICE_MANAGER: Item<Addr> = Item::new("service_manager");
+/// Only set in the test approach
+pub const ADMIN: Item<Addr> = Item::new("admin");

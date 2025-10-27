@@ -32,7 +32,7 @@ pub enum QueryMsg {
     PendingPayments { handle: String },
     #[returns(Vec<String>)]
     AllowedDenoms {},
-    #[serde(untagged)]
+    // #[serde(untagged)]
     #[returns(())]
     Wavs(ServiceHandlerQueryMessages),
 }
@@ -40,21 +40,33 @@ pub enum QueryMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Must be called by WAVS operators
-    RegisterReceive {
-        tg_handle: String,
-        chain_addr: String,
-    },
+    RegisterReceive(RegisterReceiveMsg),
     /// Must be called by WAVS operators
-    SendPayment {
-        from_tg: String,
-        to_tg: String,
-        amount: Uint256,
-        denom: String,
-    },
+    SendPayment(SendPaymentMsg), 
     /// Called directly by the blockchain account authorizing payments
     RegisterSend { tg_handle: String },
-    #[serde(untagged)]
+    // #[serde(untagged)]
     Wavs(ServiceHandlerExecuteMessages),
+}
+
+#[cw_serde]
+pub struct RegisterReceiveMsg {
+    pub tg_handle: String,
+    pub chain_addr: String,
+}
+
+#[cw_serde]
+pub struct SendPaymentMsg {
+    pub from_tg: String,
+    pub to_tg: String,
+    pub amount: Uint256,
+    pub denom: String,
+}
+
+#[cw_serde]
+pub enum WavsPayload {
+    Register(RegisterReceiveMsg),
+    SendPayment(SendPaymentMsg),
 }
 
 #[cw_serde]
