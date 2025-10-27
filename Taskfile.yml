@@ -9,7 +9,7 @@ includes:
   contracts: ./taskfile/contracts.yml
   components: ./taskfile/components.yml
   backend: ./taskfile/backend.yml
-  cli: ./taskfile/cli.yml
+  deploy: ./taskfile/deploy.yml
   test: ./taskfile/test.yml
 
 tasks:
