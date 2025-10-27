@@ -1,10 +1,10 @@
 name: telegram-payments
 
-# Juno chainID defined here: https://github.com/cosmos/chain-registry/blob/master/testnets/junotestnet/chain.json
+# Neutron chainID defined here: https://github.com/cosmos/chain-registry/blob/master/testnets/neutrontestnet/chain.json
 # Starship chain config docs: https://docs.hyperweb.io/starship/config/chains
 chains:
-  - id: uni-7
-    name: juno
+  - id: pion-1
+    name: neutron
     numValidators: 1
     ports:
       rpc: 27657
