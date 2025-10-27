@@ -10,7 +10,6 @@ publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-doctest = false
 
 [dependencies]
 tg-contract-api = { workspace = true }
@@ -27,9 +26,6 @@ cw-utils = { workspace = true }
 wavs-types = { workspace = true }
 layer-climb-proto = { workspace = true }
 
-
-[dev-dependencies]
-cw-multi-test = { workspace = true }
 
 [features]
 library = []
