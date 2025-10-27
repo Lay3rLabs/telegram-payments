@@ -21,7 +21,11 @@ impl PendingPayments {
             self.payments[i].amount += payment.amount;
         } else {
             // Insert in alphabetically sorted position
-            let insert_pos = self.payments.iter().position(|p| p.denom > payment.denom).unwrap_or(self.payments.len());
+            let insert_pos = self
+                .payments
+                .iter()
+                .position(|p| p.denom > payment.denom)
+                .unwrap_or(self.payments.len());
             self.payments.insert(insert_pos, payment);
         }
     }
@@ -55,24 +59,63 @@ mod tests {
 
     #[test]
     fn test_one_pending_payment() {
-       let mut pending = PendingPayments::default();
-        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
-        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() }]);
+        let mut pending = PendingPayments::default();
+        pending.add_payment(Coin {
+            amount: Uint256::from(100u128),
+            denom: "uusd".to_string(),
+        });
+        assert_eq!(
+            pending.balance(),
+            vec![Coin {
+                amount: Uint256::from(100u128),
+                denom: "uusd".to_string()
+            }]
+        );
     }
 
     #[test]
     fn test_duplicate_denom() {
-       let mut pending = PendingPayments::default();
-        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
-        pending.add_payment(Coin { amount: Uint256::from(200u128), denom: "uusd".to_string() });
-        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(300u128), denom: "uusd".to_string() }]);
+        let mut pending = PendingPayments::default();
+        pending.add_payment(Coin {
+            amount: Uint256::from(100u128),
+            denom: "uusd".to_string(),
+        });
+        pending.add_payment(Coin {
+            amount: Uint256::from(200u128),
+            denom: "uusd".to_string(),
+        });
+        assert_eq!(
+            pending.balance(),
+            vec![Coin {
+                amount: Uint256::from(300u128),
+                denom: "uusd".to_string()
+            }]
+        );
     }
 
     #[test]
     fn test_sorting_denoms() {
-       let mut pending = PendingPayments::default();
-        pending.add_payment(Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() });
-        pending.add_payment(Coin { amount: Uint256::from(200u128), denom: "ntrn".to_string() });
-        assert_eq!(pending.balance(), vec![Coin { amount: Uint256::from(200u128), denom: "ntrn".to_string() }, Coin { amount: Uint256::from(100u128), denom: "uusd".to_string() }]);
+        let mut pending = PendingPayments::default();
+        pending.add_payment(Coin {
+            amount: Uint256::from(100u128),
+            denom: "uusd".to_string(),
+        });
+        pending.add_payment(Coin {
+            amount: Uint256::from(200u128),
+            denom: "ntrn".to_string(),
+        });
+        assert_eq!(
+            pending.balance(),
+            vec![
+                Coin {
+                    amount: Uint256::from(200u128),
+                    denom: "ntrn".to_string()
+                },
+                Coin {
+                    amount: Uint256::from(100u128),
+                    denom: "uusd".to_string()
+                }
+            ]
+        );
     }
 }
