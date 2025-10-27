@@ -1,8 +1,8 @@
-use crate::msg::{ChainAddrResponse, ServiceManagerResponse, TgHandleResponse};
 use crate::state::{
     ALLOWED_DENOMS, FUNDED_ACCOUNTS, OPEN_ACCOUNTS, PENDING_PAYMENTS, SERVICE_MANAGER,
 };
 use cosmwasm_std::{Coin, Deps, StdResult};
+use tg_contract_api::payments::msg::{ChainAddrResponse, ServiceManagerResponse, TgHandleResponse};
 
 pub fn addr_by_tg(deps: Deps, handle: String) -> StdResult<ChainAddrResponse> {
     let addr = OPEN_ACCOUNTS

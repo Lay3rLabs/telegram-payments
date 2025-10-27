@@ -1,12 +1,18 @@
 [package]
-name = "tg_payments"
-version = "0.1.0"
-edition = "2021"
+name = "tg-contract-payments"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
+tg-contract-api = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cw-storage-plus = { workspace = true }

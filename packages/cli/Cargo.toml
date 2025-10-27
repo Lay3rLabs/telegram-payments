@@ -1,0 +1,19 @@
+[package]
+name = "tg-cli"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+[dependencies]
+tg-contract-api = { workspace = true }
+tg-utils = { workspace = true }
+tokio = {workspace = true}
+clap = {workspace = true}
+dotenvy = {workspace = true}
+rand = {workspace = true}
+anyhow = {workspace = true}
+wavs-types = {workspace = true}
+rustls = {workspace = true}
+tracing = {workspace = true}

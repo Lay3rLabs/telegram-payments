@@ -4,14 +4,13 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
+use tg_contract_api::payments::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{ALLOWED_DENOMS, SERVICE_MANAGER};
 
 mod error;
 mod execute;
-mod msg;
 mod query;
 mod state;
 
