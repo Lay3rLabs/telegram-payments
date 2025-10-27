@@ -1,8 +1,125 @@
 # Architecture
 
+## Data Flow Diagrams
+
+Note that we have a two step registrationfor the full mapping
+
+- Separate registration for sending vs receiving
+- Receiving: Telegram message proves handle ownership
+  - TG account can authorize: funds sent to this handle should be sent to the linked address
+  - Completing this step makes an "open account" which can receive but not send
+- Sending: On-chain transaction proves address ownership
+  - Address can authorize: which telegram handle can move funds from this blockchain address
+  - Done after the first receive registration, to enable a fully "funded account" that can send and receive
+- Both required for full bidirectional mapping
+- Registering with just TG or Pubkey claim opens up attack vectors (blocking payments or siphoning funds)
+
+### Registration Flow (Receive)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Ops as WAVS Operators
+    participant WAgg as WAVS Aggregator
+    participant PR as Payment Rails
+    participant Bank as Bank Module
+    
+    User->>Ops: /receive <address>
+    Ops->>WAgg: Coordinate verification
+    WAgg->>PR: Register telegram → address mapping
+    PR->>Bank: Transfer pending payments (if any)
+    PR-->>WAgg: Registration confirmed
+    WAgg-->>User: "Open account" confirmation
+```
+
+### Send Payment Flow
+
+```mermaid
+sequenceDiagram
+    participant Sender
+    participant Ops as WAVS Operators
+    participant WAgg as WAVS Aggregator
+    participant PR as Payment Rails
+    participant Bank as Bank Module
+    
+    Sender->>Ops: /send <recipient> <amount> <asset>
+    Ops->>Ops: Verify funded account
+    Ops->>WAgg: Coordinate verification
+    WAgg->>PR: Request Transfer
+    
+    alt Recipient has open account
+        PR->>Bank: Transfer from Sender to Recipient
+    else Recipient not registered
+        PR->>PR: Record Pending Transaction
+        PR->>Bank: Transfer from Sender to Payment Rails
+    end
+    
+    PR-->>WAgg: Transaction confirmed
+    WAgg-->>Sender: Confirmation message
+```
+
+### Funding Flow (Direct to Blockchain)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant MiniApp as Mini-App
+    participant Wallet
+    participant PR as Payment Rails
+    participant Bank as Bank Module
+    
+    User->>MiniApp: Open Mini-App
+    MiniApp->>Wallet: Request connection
+    Wallet-->>MiniApp: Connected
+    MiniApp->>MiniApp: Verify address matches registration
+    MiniApp->>Bank: Query current balance
+    Bank-->>MiniApp: Display balance
+    User->>MiniApp: Set sending limit
+    MiniApp->>Wallet: Create grant transaction
+    Wallet->>User: Sign transaction
+    User->>Wallet: Approve
+    opt First time funding
+        Wallet->>PR: Submit Register Message
+        PR->>PR: Link address → telegram<br/>(now bidirectional with previous receive registration)
+    end
+    Wallet->>Bank: Submit Grant Message
+    Bank->>Bank: Record Grant from Sender to Payment Rails
+    Bank-->>MiniApp: Transaction Response
+    MiniApp-->>User: "Funded account" notification
+```
+
+## Account State Model
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoAccount: User exists on Telegram
+    NoAccount --> OpenAccount: /receive <address>
+    OpenAccount --> FundedAccount: Grant transaction via Mini-App
+    FundedAccount --> OpenAccount: Revoke grant (defund)
+    FundedAccount --> FundedAccount: Top up (increase grant)
+    
+    note right of NoAccount
+        Cannot send or receive
+    end note
+    
+    note right of OpenAccount
+        Can receive payments
+        Cannot send payments
+    end note
+    
+    note right of FundedAccount
+        Can send and receive
+        Has spending limit
+    end note
+```
+
+
 ## System Overview
 
 The Telegram Payments system enables secure, decentralized payments on Cosmos chains through Telegram. The architecture consists of three main components working together: a Telegram Bot for user interaction, a WAVS Operator Set for secure transaction validation, and Payment Rails smart contracts for on-chain execution.
+
+Please note that the WAVS components focus on those parts that must be authenticated and written to the blockchain.
+For anything with lower security requirements that can be handled by a normal bot with quicker response times and less operator overhead, the backend server is used.
 
 ## High-Level Architecture Diagram
 
@@ -14,9 +131,7 @@ graph TB
         MiniApp[Telegram Mini-App]
     end
     
-    subgraph "Telegram Bot"
-        TBot[Backend Server]
-    end
+    TBot[Backend Server<br/>With TG API Key]
     
     subgraph "WAVS Operator Network"
         WAgg[WAVS Aggregator]
@@ -31,18 +146,18 @@ graph TB
         SM[Service Manager Contract]
     end
     
-    TU -->|/status, /help, /start| TBot
+    TU -->|Webhooks<br/>/status, /help, /start| TBot
+    TBot -->|Notifications| TU
     TU -->|Opens| MiniApp
     MiniApp -->|Connect| Wallet
     Wallet -->|Payment Grant| Bank
-    Wallet -->|Register| PR
+    Wallet -->|Register Send| PR
     
     Bank -->|Payment Events| TBot
-    TBot -->|Notifications| TU
     
-    TU -->|/receive, /send| WO1
-    TU -->|/receive, /send| WO2
-    TU -->|/receive, /send| WO3
+    TU -->|Poll API<br/>/receive, /send| WO1
+    TU -->|Poll API<br/>/receive, /send| WO2
+    TU -->|Poll API<br/>/receive, /send| WO3
     
     WO1 -->|Verify & Sign| WAgg
     WO2 -->|Verify & Sign| WAgg
@@ -57,9 +172,9 @@ graph TB
 
 ## Component Architecture
 
-### 1. Telegram Bot (Quick Operations)
+### 1. Backend Server
 
-**Purpose**: Handle non-secure, fast user interactions
+**Purpose**: Handle non-secure, fast user interactions with Telegram. Has Telegram API key, and is registered to handle Telegram Webhooks.
 
 **Responsibilities**:
 - Read-Write-access to TG API (Main Entry Point)
@@ -67,11 +182,10 @@ graph TB
 - Handle `/status` command queries
 - Listen for on-chain payment events
 - Send payment notification messages to users
-- Provide links to Mini-App URL
 
 **Technology Stack**:
-- Single process bot implementation
-- Direct integration with Telegram Bot API
+- Single process bot implementation in Rust
+- Webhook registration
 - Read-only blockchain monitoring
 
 **Security Model**: No access to funds or sensitive operations
@@ -84,15 +198,15 @@ graph TB
 
 #### WAVS Operators (Multiple Nodes)
 - Read-access to TG API (Listen)
-- Verify Telegram message authenticity
-- Validate user permissions and limits
-- Create and sign messages for blockchain transactions
+- WAVS: Poll TG API (every 1-5 seconds) for new TG messages to process
+- Component: Validate user permissions and limits
+- Component: Create and sign payload to react to message on the blockchain 
 
 #### WAVS Aggregator
-- Write-access to TG API (Tx Receipts)
-- Aggregate signatures from operator quorum
-- Submit multi-signed transactions to blockchain
-- Send confirmation or error messages back to Telegram Bot (tx response)
+- WAVS: Aggregate signatures from operator quorum
+- WAVS: Submit multi-signed transactions to blockchain
+- Component: Write-access to TG API (Tx Receipts)
+- Component: Send confirmation or error messages back to Telegram Bot (tx response)
 
 **Responsibilities**:
 - Handle `/receive` command (register open accounts)
@@ -154,106 +268,6 @@ graph TB
 - User signs all transactions
 - Verifies wallet address matches registration
 
-## Data Flow Diagrams
-
-### Registration Flow (Receive)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Ops as WAVS Operators
-    participant WAgg as WAVS Aggregator
-    participant PR as Payment Rails
-    participant Bank as Bank Module
-    
-    User->>Ops: /receive <address>
-    Ops->>WAgg: Coordinate verification
-    WAgg->>PR: Register address → telegram mapping
-    PR->>Bank: Transfer pending payments (if any)
-    PR-->>WAgg: Registration confirmed
-    WAgg-->>User: "Open account" confirmation
-```
-
-### Send Payment Flow
-
-```mermaid
-sequenceDiagram
-    participant Sender
-    participant Ops as WAVS Operators
-    participant WAgg as WAVS Aggregator
-    participant PR as Payment Rails
-    participant Bank as Bank Module
-    
-    Sender->>Ops: /send <recipient> <amount> <asset>
-    Ops->>Ops: Verify funded account
-    Ops->>WAgg: Coordinate verification
-    WAgg->>PR: Request Transfer
-    
-    alt Recipient has open account
-        PR->>Bank: Transfer from Sender to Recipient
-    else Recipient not registered
-        PR->>PR: Record Pending Transaction
-        PR->>Bank: Transfer from Sender to Payment Rails
-    end
-    
-    PR-->>WAgg: Transaction confirmed
-    WAgg-->>Sender: Confirmation message
-```
-
-### Funding Flow (Direct to Blockchain)
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant MiniApp as Mini-App
-    participant Wallet
-    participant PR as Payment Rails
-    participant Bank as Bank Module
-    
-    User->>MiniApp: Open Mini-App
-    MiniApp->>Wallet: Request connection
-    Wallet-->>MiniApp: Connected
-    MiniApp->>MiniApp: Verify address matches registration
-    MiniApp->>Bank: Query current balance
-    Bank-->>MiniApp: Display balance
-    User->>MiniApp: Set sending limit
-    MiniApp->>Wallet: Create grant transaction
-    Wallet->>User: Sign transaction
-    User->>Wallet: Approve
-    opt First time funding
-        Wallet->>PR: Submit Register Message
-        PR->>PR: Link telegram → address (bidirectional)
-    end
-    Wallet->>Bank: Submit Grant Message
-    Bank->>Bank: Record Grant from Sender to Payment Rails
-    Bank-->>MiniApp: Transaction Response
-    MiniApp-->>User: "Funded account" notification
-```
-
-## Account State Model
-
-```mermaid
-stateDiagram-v2
-    [*] --> NoAccount: User exists on Telegram
-    NoAccount --> OpenAccount: /receive <address>
-    OpenAccount --> FundedAccount: Grant transaction via Mini-App
-    FundedAccount --> OpenAccount: Revoke grant (defund)
-    FundedAccount --> FundedAccount: Top up (increase grant)
-    
-    note right of NoAccount
-        Cannot send or receive
-    end note
-    
-    note right of OpenAccount
-        Can receive payments
-        Cannot send payments
-    end note
-    
-    note right of FundedAccount
-        Can send and receive
-        Has spending limit
-    end note
-```
 
 ## Security Architecture
 
