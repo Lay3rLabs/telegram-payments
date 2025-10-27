@@ -31,7 +31,7 @@ graph TB
         SM[Service Manager Contract]
     end
     
-    TU -->|/status, help| TBot
+    TU -->|/status, /help, /start| TBot
     TU -->|Opens| MiniApp
     MiniApp -->|Connect| Wallet
     Wallet -->|Payment Grant| Bank
@@ -63,7 +63,7 @@ graph TB
 
 **Responsibilities**:
 - Read-Write-access to TG API (Main Entry Point)
-- Provide help menu and basic instructions
+- Provide basic instructions upon `/help` and `/start`
 - Handle `/status` command queries
 - Listen for on-chain payment events
 - Send payment notification messages to users
