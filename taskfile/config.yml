@@ -12,8 +12,7 @@ vars:
 
   BACKEND_DIR: '{{joinPath .REPO_ROOT "backend"}}'
   WAVS_HOME_DIR: '{{joinPath .BACKEND_DIR "wavs-home"}}'
-  STARSHIP_DIR: '{{joinPath .BACKEND_DIR "starship"}}'
-  STARSHIP_CHAIN_FILE: '{{joinPath .STARSHIP_DIR "chains.yml"}}'
+  CHAINS_DIR: '{{joinPath .BACKEND_DIR "chains"}}'
   DOCKER_DIR: '{{joinPath .BACKEND_DIR "docker"}}'
   ARTIFACTS_PATH: '{{joinPath .REPO_ROOT "builds"}}'
   COMPONENTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "components"}}'
