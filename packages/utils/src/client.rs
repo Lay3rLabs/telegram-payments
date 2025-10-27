@@ -18,7 +18,7 @@ use std::fmt::Debug;
 #[allow(clippy::large_enum_variant)]
 pub enum AnyQuerier {
     Climb(QueryClient),
-    #[cfg(feature = "climb_pool")]
+    #[cfg(feature = "on-chain")]
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
     MultiTest(Rc<RefCell<App>>),
@@ -30,7 +30,7 @@ impl From<QueryClient> for AnyQuerier {
     }
 }
 
-#[cfg(feature = "climb_pool")]
+#[cfg(feature = "on-chain")]
 impl From<layer_climb::pool::SigningClientPool> for AnyQuerier {
     fn from(pool: layer_climb::pool::SigningClientPool) -> AnyQuerier {
         AnyQuerier::ClimbPool(pool)
@@ -62,7 +62,7 @@ impl AnyQuerier {
                     .await
                     .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
             }
-            #[cfg(feature = "climb_pool")]
+            #[cfg(feature = "on-chain")]
             Self::ClimbPool(pool) => {
                 let addr = layer_climb::prelude::Address::try_from(address)
                     .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
@@ -86,7 +86,7 @@ impl AnyQuerier {
 #[allow(clippy::large_enum_variant)]
 pub enum AnyExecutor {
     Climb(SigningClient),
-    #[cfg(feature = "climb_pool")]
+    #[cfg(feature = "on-chain")]
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
     MultiTest {
@@ -101,7 +101,7 @@ impl From<SigningClient> for AnyExecutor {
     }
 }
 
-#[cfg(feature = "climb_pool")]
+#[cfg(feature = "on-chain")]
 impl From<layer_climb::pool::SigningClientPool> for AnyExecutor {
     fn from(pool: layer_climb::pool::SigningClientPool) -> AnyExecutor {
         AnyExecutor::ClimbPool(pool)
@@ -140,7 +140,7 @@ impl AnyExecutor {
                     .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
                     .map(AnyTxResponse::Climb)
             }
-            #[cfg(feature = "climb_pool")]
+            #[cfg(feature = "on-chain")]
             Self::ClimbPool(pool) => {
                 let client = pool
                     .get()

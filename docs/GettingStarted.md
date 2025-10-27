@@ -4,13 +4,12 @@
 
 1. The usual stuff (Rust, Docker, NPM, etc.)
 2. [Taskfile](https://taskfile.dev/installation)
-3. [Install Starship v1](https://docs.hyperweb.io/starship#quick-start-guide)
+3. Copy `.example.env` to `.env` and replace the values
 
 ## Building
 
 #### Contracts
 
-_STATUS: DONE_
 ```bash
 task contracts:build-all
 ```
@@ -30,8 +29,11 @@ task components:build-all
 *off-chain*
 
 Test a specific contract off-chain
+
+Note that the name is the friendly name set in [config.yml](../taskfile/config.yml) without the `tg-contract` prefix
+
 ```bash
-task test:contract-off-chain CONTRACT=<contract-name>
+task test:contract-off-chain CONTRACT=payments
 ```
 
 All off-chain tests
@@ -43,23 +45,15 @@ task test:off-chain
 
 This requires first start the chains, running the tests, and then remembering to shut it down
 
-Be patient when starting the chains, it can take a minute or two
+It may take a while for the chain to startup, be patient... recommendation is to leave it up while developing
 
-_STATUS: TODO_
 ```bash
 task backend:start-chains
-task test:contracts-on-chain
+ # alternatively `task test:contract-on-chain CONTRACT=payments`
+task test:on-chain
 task backend:stop-chains
 ```
 
-It may take a while for the chain to startup, recommendation is to leave it up while developing
-
-If you run into errors with `Starship` or `helm` namespace being taken, try:
-
-```bash
-helm repo remove starship
-helm delete cw-middleware
-```
 
 ### Components
 

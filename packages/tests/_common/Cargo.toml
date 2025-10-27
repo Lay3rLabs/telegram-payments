@@ -8,4 +8,16 @@ repository.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+default = []
+on-chain = ["tg-utils/on-chain"]
+
 [dependencies]
+tg-utils = { workspace = true }
+tg-contract-payments = { workspace = true}
+tg-contract-api= { workspace = true}
+wavs-types = { workspace = true }
+cosmwasm-std = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+layer-climb = { workspace = true }

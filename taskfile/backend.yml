@@ -8,8 +8,9 @@ includes:
 tasks:
   start-chains:
     cmds:
-      - starship start --config "{{.STARSHIP_CHAIN_FILE}}"
+      - sh "{{.CHAINS_DIR}}/start_neutron.sh"
 
   stop-chains:
     cmds:
-      - starship stop --config "{{.STARSHIP_CHAIN_FILE}}"
+      - docker kill neutron-local || true
+      - docker rm neutron-local || true
