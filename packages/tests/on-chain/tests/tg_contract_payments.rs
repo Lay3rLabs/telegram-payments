@@ -1,4 +1,4 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, to_json_vec};
 use layer_climb::prelude::*;
 use layer_climb::proto::Coin as ProtoCoin;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
@@ -145,9 +145,12 @@ async fn build_registration_messages(
         tg_handle: tg_handle.to_string(),
     };
 
-    let exec_msg = signing_client
-        .contract_execute_msg(&contract_addr, vec![], &register_msg)
-        .unwrap();
+    let exec_msg = layer_climb_proto::wasm::MsgExecuteContract {
+        sender: user_addr.to_string(),
+        contract: contract_addr.to_string(),
+        msg: to_json_vec(&register_msg).unwrap(),
+        funds: vec![],
+    };
 
     let grant_msg = signing_client
         .authz_grant_send_msg(
