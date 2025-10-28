@@ -118,7 +118,7 @@ impl TestPool {
         if balance < 10000000000 {
             tracing::info!("{} has balance of {}, sending some funds...", addr, balance);
 
-            faucet::tap(&addr, None).await.unwrap();
+            faucet::tap(&addr, None, None).await.unwrap();
             let new_balance = querier
                 .balance(addr, None)
                 .await

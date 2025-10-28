@@ -77,26 +77,66 @@ async fn fund_account_and_send_workflow() {
         .unwrap();
 
     // Alice registers to send funds and gives grant message in one tx
-    let grant = cosmwasm_std::coin(500_000_000u128, "untrn");
-    let (msg1, msg2) = build_registration_messages(
-        &app_client,
-        tg_alice,
-        &alice_addr,
-        &payments.querier.addr,
-        grant,
-    )
-    .await;
+    let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
 
-    alice
-        .tx_builder()
-        .broadcast([
-            proto_into_any(&msg1).unwrap(),
-            proto_into_any(&msg2).unwrap(),
-        ])
+    let granter_addr: Address = CosmosAddr::try_from(&alice_addr).unwrap().into();
+    let grantee_addr: Address = CosmosAddr::try_from(&bob_addr).unwrap().into();
+
+    // FIXME: temporarily just trying to get any basic granting to work...
+    tracing::info!("Sending fees to make sure accounts exist");
+
+    faucet::tap(&granter_addr, Some(2_000_000_000u128), None)
         .await
         .unwrap();
 
-    // Query alice bidirectional mapping is now set
+    faucet::tap(&grantee_addr, None, None).await.unwrap();
+
+    eprintln!(
+        "Attempting to grant from {} to {}",
+        granter_addr, grantee_addr
+    );
+
+    app_client
+        .pool()
+        .get()
+        .await
+        .unwrap()
+        .authz_grant_send(
+            granter_addr,
+            grantee_addr,
+            vec![ProtoCoin {
+                denom: grant.denom,
+                amount: grant.amount.to_string(),
+            }],
+            vec![],
+            None,
+        )
+        .await
+        .unwrap();
+
+    // let (msg1, msg2) = build_registration_messages(
+    //     &app_client,
+    //     tg_alice,
+    //     &alice_addr,
+    //     &payments.querier.addr,
+    //     grant,
+    // )
+    // .await;
+
+    // app_client
+    //     .pool()
+    //     .get()
+    //     .await
+    //     .unwrap()
+    //     .tx_builder()
+    //     .broadcast([
+    //         proto_into_any(&msg1).unwrap(),
+    //         proto_into_any(&msg2).unwrap(),
+    //     ])
+    //     .await
+    //     .unwrap();
+
+    // Query alice reverse mapping is now set
     assert_eq!(
         payments
             .querier
