@@ -8,6 +8,7 @@ use wavs_types::ChainKey;
 
 #[derive(Clone, Parser)]
 #[command(version, about, long_about = None)]
+#[allow(clippy::large_enum_variant)]
 pub enum CliCommand {
     /// Upload a contract to the chain
     UploadContract {
@@ -65,6 +66,9 @@ pub enum CliCommand {
         component_aggregator_cid_file: PathBuf,
 
         #[arg(long)]
+        cron_schedule: String,
+
+        #[arg(long)]
         aggregator_url: Url,
 
         #[arg(long)]
@@ -88,6 +92,26 @@ pub enum CliCommand {
     },
     AssertAccountExists {
         addr: Option<String>,
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    AggregatorRegisterService {
+        #[arg(long)]
+        service_manager_address: String,
+
+        #[arg(long)]
+        aggregator_url: Url,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    OperatorAddService {
+        #[arg(long)]
+        service_manager_address: String,
+
+        #[arg(long)]
+        wavs_url: Url,
+
         #[clap(flatten)]
         args: CliArgs,
     },

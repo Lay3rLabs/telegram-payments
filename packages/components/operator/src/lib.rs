@@ -9,7 +9,7 @@ struct Component;
 
 impl Guest for Component {
     fn run(_trigger_action: TriggerAction) -> Result<Option<WasmResponse>, _rt::String> {
-        todo!()
+        Ok(None)
     }
 }
 

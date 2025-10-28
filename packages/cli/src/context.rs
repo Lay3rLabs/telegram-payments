@@ -28,6 +28,8 @@ impl CliContext {
             CliCommand::UploadComponent { args, .. } => args,
             CliCommand::UploadService { args, .. } => args,
             CliCommand::AssertAccountExists { args, .. } => args,
+            CliCommand::AggregatorRegisterService { args, .. } => args,
+            CliCommand::OperatorAddService { args, .. } => args,
         }
     }
 

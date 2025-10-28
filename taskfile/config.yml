@@ -3,6 +3,13 @@ version: "3"
 vars:
   ALL_COMPONENTS: ["operator", "aggregator"]
   ALL_CONTRACTS: ["payments"]
+  ALL_MNEMONICS_TO_FUND:
+    [
+      "CLI_MNEMONIC",
+      "WAVS_OPERATOR_MNEMONIC_1",
+      "WAVS_OPERATOR_MNEMONIC_2",
+      "WAVS_AGGREGATOR_COSMOS_CREDENTIAL",
+    ]
   COMPONENT_WITS_OPERATOR: ["wavs:operator@2.0.0"]
   COMPONENT_WITS_AGGREGATOR: ["wavs:aggregator@2.0.0"]
 
@@ -29,6 +36,7 @@ vars:
   CONTRACT_PREFIX: "tg_contract"
   COMPONENT_PREFIX: "tg_component"
   CW_OPTIMIZER_CACHE: "wavs-telegram-payments"
+  SERVICE_CRON_SCHEDULE: "*/10 * * * * * *" # Every 10 seconds
 
   # Changing this requires a change in `packages/tests/on-chain/src/client/config.rs`
   WAVS_BASE_PORT: 8123 # Base port for WAVS, subsequent ports will be incremented by 1 for each instance
@@ -47,7 +55,7 @@ vars:
   HEALTH_CHECK_TIMEOUT: 5 # seconds to wait for service health checks
   COSMWASM_OPTIMIZER_IMAGE: 'cosmwasm/optimizer{{if eq .ARCH "arm64"}}-arm64{{end}}:0.17.0'
   WAVS_DOCKER_IMAGE: 'ghcr.io/lay3rlabs/wavs:2.0.0-alpha.7{{if eq .ARCH "arm64"}}-arm64{{end}}'
-  WAVS_CW_MIDDLEWARE_DOCKER_IMAGE: 'ghcr.io/lay3rlabs/cw-middleware:0.2.0-alpha.6{{if eq .ARCH "arm64"}}-arm64{{end}}'
+  WAVS_CW_MIDDLEWARE_DOCKER_IMAGE: 'ghcr.io/lay3rlabs/cw-middleware:0.2.0-alpha.7{{if eq .ARCH "arm64"}}-arm64{{end}}'
   JAEGER_DOCKER_IMAGE: "jaegertracing/jaeger:2.5.0"
   PROMETHEUS_DOCKER_IMAGE: "prom/prometheus:v3.3.0"
   IPFS_DOCKER_IMAGE: "ipfs/kubo:v0.38.1"
