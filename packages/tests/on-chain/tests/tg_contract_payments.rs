@@ -58,6 +58,14 @@ async fn fund_account_and_send_workflow() {
 
     // Give some tokens to Alice
     faucet::tap(&alice_signer.addr, None, None).await.unwrap();
+    // and to the contract, so it exist as a funded account
+    faucet::tap(
+        &CosmosAddr::try_from(&payments.querier.addr).unwrap().into(),
+        Some(1u128),
+        None,
+    )
+    .await
+    .unwrap();
 
     // TODO: Query balance of alice (non-zero), bob (zero)
     // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
