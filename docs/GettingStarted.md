@@ -9,7 +9,21 @@
 5. Copy `.example.env` to `.env` and replace the values
 6. Make sure you have `wasm32-wasip2` target installed: `rustup target add wasm32-wasip2`
 
+## TL;DR
+
+Start all backend services
 ```bash
+# Alternatively, if you need more than one operator
+# task backend:start-all OPERATORS=3
+task backend:start-all
+```
+
+_... do stuff ..._
+
+Stop all backend services
+```bash
+task backend:stop-all
+```
 
 ## Building
 
@@ -84,7 +98,7 @@ Start the server and watch for changes (auto-restart)
 task backend:start-server-watch
 ```
 
-### WAVS Operator
+### WAVS
 
 Start the operator, aggregator, and telemetry
 ```bash
@@ -97,6 +111,19 @@ Stop the operator, aggregator, and telemetry
 ```bash
 task backend:stop-wavs
 ```
+
+### IPFS
+
+Start a local IPFS server
+
+```bash
+task backend:start-ipfs
+```
+
+Stop the local IPFS server
+```bash
+task backend:stop-ipfs
+task backend:stop-wavs
 
 ### All Backend Services At Once
 

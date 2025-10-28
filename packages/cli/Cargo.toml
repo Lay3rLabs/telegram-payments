@@ -20,3 +20,4 @@ wavs-types = {workspace = true}
 rustls = {workspace = true}
 tracing = {workspace = true}
 layer-climb = {workspace = true}
+reqwest = {workspace = true}

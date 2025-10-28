@@ -2,8 +2,9 @@ use anyhow::Result;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use wavs_types::ComponentDigest;
 
-use crate::command::ContractKind;
+use crate::command::{ComponentKind, ContractKind};
 
 pub struct Output {
     pub path: PathBuf,
@@ -42,5 +43,20 @@ pub enum OutputData {
         kind: ContractKind,
         address: String,
         tx_hash: String,
+    },
+    ComponentUpload {
+        kind: ComponentKind,
+
+        /// The hash of the file,
+        digest: ComponentDigest,
+
+        /// The content identifier (CID) of the uploaded file
+        cid: String,
+
+        /// The IPFS URI (e.g., "ipfs://Qm...")
+        uri: String,
+
+        /// The gateway URL for accessing the file via HTTP
+        gateway_url: String,
     },
 }
