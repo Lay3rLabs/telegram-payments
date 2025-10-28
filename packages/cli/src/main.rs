@@ -1,5 +1,6 @@
 mod command;
 mod context;
+mod ipfs;
 mod output;
 
 use tg_utils::{faucet, tracing::tracing_init};
@@ -7,6 +8,7 @@ use tg_utils::{faucet, tracing::tracing_init};
 use crate::{
     command::{AuthKind, CliCommand, ContractKind},
     context::CliContext,
+    ipfs::IpfsFile,
     output::OutputData,
 };
 
@@ -117,6 +119,43 @@ async fn main() {
             println!(
                 "Tapped faucet for {addr} - balance before: {balance_before} balance after: {balance_after}"
             );
+        }
+        CliCommand::UploadComponent {
+            kind,
+            args,
+            ipfs_api_url,
+            ipfs_gateway_url,
+        } => {
+            let bytes = kind.wasm_bytes().await;
+
+            let digest = wavs_types::ComponentDigest::hash(&bytes);
+
+            let resp = IpfsFile::upload(
+                bytes,
+                &format!("{kind}.wasm"),
+                ipfs_api_url.as_ref(),
+                ipfs_gateway_url.as_ref(),
+                true,
+            )
+            .await
+            .unwrap();
+
+            let IpfsFile {
+                cid,
+                uri,
+                gateway_url,
+            } = resp;
+
+            args.output()
+                .write(OutputData::ComponentUpload {
+                    kind,
+                    digest,
+                    cid,
+                    uri,
+                    gateway_url,
+                })
+                .await
+                .unwrap();
         }
     }
 }

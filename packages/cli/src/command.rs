@@ -1,5 +1,6 @@
 use crate::output::{Output, OutputFormat};
 use clap::{Parser, ValueEnum};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tg_utils::path::repo_root;
 use wavs_types::ChainKey;
@@ -7,7 +8,7 @@ use wavs_types::ChainKey;
 #[derive(Clone, Parser)]
 #[command(version, about, long_about = None)]
 pub enum CliCommand {
-    /// Generate mnemonics for the .env file
+    /// Upload a contract to the chain
     UploadContract {
         #[arg(long)]
         kind: ContractKind,
@@ -15,6 +16,7 @@ pub enum CliCommand {
         #[clap(flatten)]
         args: CliArgs,
     },
+    /// Instantiate the Payments contract
     InstantiatePayments {
         #[arg(long)]
         code_id: u64,
@@ -29,6 +31,20 @@ pub enum CliCommand {
 
         #[arg(long, default_value_t = AuthKind::User)]
         auth_kind: AuthKind,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    /// Upload a component to IPFS
+    UploadComponent {
+        #[arg(long)]
+        kind: ComponentKind,
+
+        #[arg(long)]
+        ipfs_api_url: Url,
+
+        #[arg(long)]
+        ipfs_gateway_url: Url,
 
         #[clap(flatten)]
         args: CliArgs,
@@ -136,5 +152,39 @@ impl AuthKind {
             Self::User => "user",
             Self::ServiceManager => "service-manager",
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, ValueEnum)]
+#[clap(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum ComponentKind {
+    Operator,
+    Aggregator,
+}
+
+impl std::fmt::Display for ComponentKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl ComponentKind {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Operator => "operator",
+            Self::Aggregator => "aggregator",
+        }
+    }
+    pub async fn wasm_bytes(&self) -> Vec<u8> {
+        let path = repo_root()
+            .unwrap()
+            .join("builds")
+            .join("components")
+            .join(format!("tg_component_{}.wasm", self.as_str()));
+
+        tokio::fs::read(&path)
+            .await
+            .unwrap_or_else(|_| panic!("Failed to read wasm bytes at: {}", path.to_string_lossy()))
     }
 }

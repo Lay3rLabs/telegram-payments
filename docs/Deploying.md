@@ -22,7 +22,7 @@ Replace `payments` and `payments-code-id.json` with the contract name and desire
 task deploy:contract-upload CONTRACT=payments FILENAME=payments-code-id.json
 ```
 
-This will upload the contract and write the code-id in a JSON file under `builds/deployments/<your-filename>`
+This will upload the contract and write the code-id in a JSON file under `builds/deployments/payments-code-id.json`
 
 ### Instantiating
 
@@ -36,4 +36,18 @@ Replace `payments-instantiation.json` with the desired output filename
 task deploy:contract-instantiate-payments FILENAME=payments-instantiation.json CODE_ID={value}
 ```
 
-This will instantiate the contract and write the address in a JSON file under `builds/deployments/<your-filename>`
+This will instantiate the contract and write the address in a JSON file under `builds/deployments/payments-instantiation.json`
+
+## Deploying comopnents
+
+### Uploading
+
+Upload and get an IPFS CID for each component
+
+Replace `operator` and `operator-cid.json` with the contract name and desired output filename
+
+```bash
+task deploy:upload-component COMPONENT=operator FILENAME=operator-cid.json
+```
+
+This will upload the component and write the cid in a JSON file under `builds/deployments/operator.cid`
