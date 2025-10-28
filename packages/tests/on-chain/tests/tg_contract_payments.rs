@@ -1,7 +1,6 @@
 use cosmwasm_std::Addr;
-use layer_climb_proto::{
-    authz::MsgGrant, bank::SendAuthorization, wasm::MsgExecuteContract, Coin as ProtoCoin,
-};
+use layer_climb::prelude::*;
+use layer_climb::proto::Coin as ProtoCoin;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
 use tg_contract_api::payments::msg::ExecuteMsg;
 use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
@@ -83,9 +82,27 @@ async fn fund_account_and_send_workflow() {
 
     // Alice registers to send funds and gives grant message in one tx
     let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
-    let (msg1, msg2) =
-        build_registration_messages(tg_alice, &alice_addr, &payments.querier.addr, grant);
-    // TODO: Encode these, sign and submit tx
+    let (msg1, msg2) = build_registration_messages(
+        &app_client,
+        tg_alice,
+        &alice_addr,
+        &payments.querier.addr,
+        grant,
+    )
+    .await;
+
+    app_client
+        .pool()
+        .get()
+        .await
+        .unwrap()
+        .tx_builder()
+        .broadcast([
+            proto_into_any(&msg1).unwrap(),
+            proto_into_any(&msg2).unwrap(),
+        ])
+        .await
+        .unwrap();
 
     // Query alice reverse mapping is now set
     assert_eq!(
@@ -109,34 +126,40 @@ async fn fund_account_and_send_workflow() {
 
 /// This builds messages for a user to register and grant permission to send on their behalf.
 /// It must be signed by the users private key and then submitted as a multi-msg tx
-fn build_registration_messages(
+async fn build_registration_messages(
+    app_client: &AppClient,
     tg_handle: &str,
     user_addr: &Addr,
     contract_addr: &Addr,
-    grant: cosmwasm_std::Coin,
-) -> (MsgExecuteContract, MsgGrant) {
+    grant_amount: cosmwasm_std::Coin,
+) -> (
+    layer_climb_proto::wasm::MsgExecuteContract,
+    layer_climb_proto::authz::MsgGrant,
+) {
+    let signing_client = app_client.pool().get().await.unwrap();
+
+    let user_addr: Address = CosmosAddr::try_from(user_addr).unwrap().into();
+    let contract_addr: Address = CosmosAddr::try_from(contract_addr).unwrap().into();
+
     let register_msg = ExecuteMsg::RegisterSend {
         tg_handle: tg_handle.to_string(),
     };
-    let exec_msg: MsgExecuteContract = MsgExecuteContract {
-        contract: contract_addr.to_string(),
-        sender: user_addr.to_string(),
-        msg: cosmwasm_std::to_json_vec(&register_msg).unwrap(),
-        funds: vec![],
-    };
 
-    // TODO: this import doesn't work, the SendAuthorization type is there, but no authz.MsgGrant in layer-climb-proto
-    let grant_msg = MsgGrant {
-        granter: user_addr.to_string(),
-        grantee: contract_addr.to_string(),
-        grant: SendAuthorization {
-            spend_limit: vec![ProtoCoin {
-                amount: grant.amount.to_string(),
-                denom: grant.denom.clone(),
+    let exec_msg = signing_client
+        .contract_execute_msg(&contract_addr, vec![], &register_msg)
+        .unwrap();
+
+    let grant_msg = signing_client
+        .authz_grant_send_msg(
+            user_addr,
+            contract_addr,
+            vec![ProtoCoin {
+                denom: grant_amount.denom,
+                amount: grant_amount.amount.to_string(),
             }],
-            allow_list: vec![],
-        },
-    };
+            vec![],
+        )
+        .unwrap();
 
     return (exec_msg, grant_msg);
 }
