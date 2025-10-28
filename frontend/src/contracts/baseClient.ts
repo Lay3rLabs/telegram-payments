@@ -6,13 +6,25 @@
 // @ts-nocheck
 
 
-import { StdFee, Coin } from '@interchainjs/types';
-import { DirectSigner } from '@interchainjs/cosmos';
+// @ts-nocheck - Generated file with type issues
+import type { DirectSigner } from '@interchainjs/cosmos';
 import { getSmartContractState } from 'interchainjs/cosmwasm/wasm/v1/query.rpc.func';
 import { executeContract } from 'interchainjs/cosmwasm/wasm/v1/tx.rpc.func';
-import { QuerySmartContractStateRequest, QuerySmartContractStateResponse } from 'interchainjs/cosmwasm/wasm/v1/query';
-import { MsgExecuteContract } from 'interchainjs/cosmwasm/wasm/v1/tx';
-import { Chain } from '@chain-registry/v2-types';
+import type { QuerySmartContractStateRequest, QuerySmartContractStateResponse } from 'interchainjs/cosmwasm/wasm/v1/query';
+import type { MsgExecuteContract } from 'interchainjs/cosmwasm/wasm/v1/tx';
+
+// Define types that might not be exported properly
+export type StdFee = {
+  amount: Array<{ denom: string; amount: string }>;
+  gas: string;
+};
+
+export type Coin = {
+  denom: string;
+  amount: string;
+};
+
+export type Chain = any; // Use any for now since the import is broken
 
 // Encoding utility functions
 const fromUint8Array = <T>(uint8Array: Uint8Array): T => {
@@ -28,7 +40,7 @@ const toUint8Array = (obj: any): Uint8Array => {
 // Chain registry configuration
 // The amount under gasPrice represents gas price per unit
 export interface ChainConfig {
-  chain?: Chain;
+  chain?: any; // Chain type from registry
   gasPrice?: {
     denom: string;
     amount: string;
@@ -36,7 +48,7 @@ export interface ChainConfig {
 }
 
 // Gas fee calculation utilities
-export const calculateGasFromChain = (chain: Chain, gasAmount: string): StdFee => {
+export const calculateGasFromChain = (chain: any, gasAmount: string): StdFee => {
   try {
     const feeTokens = chain.fees?.feeTokens;
     

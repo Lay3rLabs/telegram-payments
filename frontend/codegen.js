@@ -3,7 +3,6 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const builder = new TSBuilder({
