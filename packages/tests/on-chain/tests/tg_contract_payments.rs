@@ -55,6 +55,7 @@ async fn fund_account_and_send_workflow() {
 
     println!("Alice: {}", &alice.addr);
     println!("Bob: {}", &bob_addr);
+    println!("Contract: {}", &payments.executor.addr);
 
     // Give some tokens to Alice
     faucet::tap(&alice.addr, None, None).await.unwrap();
@@ -66,11 +67,7 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap()
         .unwrap_or_default();
-    let bob_balance = app_client
-        .pool()
-        .get()
-        .await
-        .unwrap()
+    let bob_balance = alice
         .querier
         .balance(bob_addr.clone().into(), None)
         .await
@@ -109,7 +106,7 @@ async fn fund_account_and_send_workflow() {
     )
     .await;
 
-    alice
+    let tx_resp = alice
         .tx_builder()
         .broadcast([
             proto_into_any(&msg1).unwrap(),
@@ -117,6 +114,10 @@ async fn fund_account_and_send_workflow() {
         ])
         .await
         .unwrap();
+
+    for event in CosmosTxEvents::from(&tx_resp).filter_events_by_attr_key("message", "action") {
+        println!("Event: {:#?}", event);
+    }
 
     // Query alice bidirectional mapping is now set
     assert_eq!(
@@ -149,11 +150,7 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap()
         .unwrap_or_default();
-    let bob_balance = app_client
-        .pool()
-        .get()
-        .await
-        .unwrap()
+    let bob_balance = alice
         .querier
         .balance(bob_addr.into(), None)
         .await
