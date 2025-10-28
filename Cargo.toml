@@ -79,15 +79,15 @@ toml = "0.9.5"
 serde_json = "1.0.142"
 
 # Layer-climb
-layer-climb = "0.8.6"
-layer-climb-core = "0.8.6"
-layer-climb-address = { version = "0.8.6", features = [
+layer-climb = "0.8.7"
+layer-climb-core = "0.8.7"
+layer-climb-address = { version = "0.8.7", features = [
   "cw-storage",
   "openapi",
 ] }
-layer-climb-config = "0.8.6"
-layer-climb-cli = "0.8.6"
-layer-climb-proto = "0.8.6"
+layer-climb-config = "0.8.7"
+layer-climb-cli = "0.8.7"
+layer-climb-proto = "0.8.7"
 
 # CosmWasm
 cosmwasm-schema = "3.0.2"

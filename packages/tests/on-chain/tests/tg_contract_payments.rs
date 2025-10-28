@@ -1,6 +1,5 @@
-use cosmwasm_std::{Addr, to_json_vec};
+use cosmwasm_std::{to_json_vec, Addr};
 use layer_climb::prelude::*;
-use layer_climb::proto::Coin as ProtoCoin;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
 use tg_contract_api::payments::msg::ExecuteMsg;
 use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
@@ -60,7 +59,7 @@ async fn fund_account_and_send_workflow() {
 
     // TODO: Query balance of alice (non-zero), bob (zero)
     // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
-    
+
     // WAVS Admin registers Alice to receive payments
     shared_tests::payments::register_recieves_open_account(
         &payments.querier,
@@ -157,12 +156,9 @@ async fn build_registration_messages(
 
     let grant_msg = signing_client
         .authz_grant_send_msg(
-            user_addr,
+            Some(user_addr),
             contract_addr,
-            vec![ProtoCoin {
-                denom: grant_amount.denom,
-                amount: grant_amount.amount.to_string(),
-            }],
+            vec![grant_amount.to_proto_coin()],
             vec![],
         )
         .unwrap();
