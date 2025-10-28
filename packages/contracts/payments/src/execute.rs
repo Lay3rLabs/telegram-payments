@@ -2,7 +2,8 @@ use crate::state::{
     ADMIN, ALLOWED_DENOMS, FUNDED_ACCOUNTS, OPEN_ACCOUNTS, PENDING_PAYMENTS, SERVICE_MANAGER,
 };
 use cosmwasm_std::{ensure, AnyMsg, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
-use layer_climb_proto::{bank::MsgSend, Coin as ProtoCoin, Message, Name};
+use layer_climb_proto::Any;
+use layer_climb_proto::{authz::MsgExec, bank::MsgSend, Coin as ProtoCoin, Message, Name};
 use tg_contract_api::payments::msg::{RegisterReceiveMsg, SendPaymentMsg, WavsPayload};
 use wavs_types::contracts::cosmwasm::service_manager::ServiceManagerQueryMessages;
 use wavs_types::contracts::cosmwasm::{
@@ -157,27 +158,35 @@ pub fn _send_payment(
             PENDING_PAYMENTS.save(deps.storage, &to_tg, &pending)?;
 
             // Send to this contract
-            env.contract.address
+            env.contract.address.clone()
         }
     };
 
-    // We need to build a custom Any (protobuf) message to expose the power of sending from a different address
-    let send_val = ProtoCoin {
-        amount: amount.amount.to_string(),
-        denom: amount.denom.clone(),
-    };
-    let proto = MsgSend {
+    // Custom bank MsgSend from the original sender, not the contract
+    let msg_send = MsgSend {
         from_address: from_addr.to_string(),
         to_address: to_addr.to_string(),
-        amount: vec![send_val],
+        amount: vec![ProtoCoin {
+            amount: amount.amount.to_string(),
+            denom: amount.denom.clone(),
+        }],
     };
-    let msg = AnyMsg {
-        type_url: MsgSend::type_url(),
-        value: proto.encode_to_vec().into(),
+    // Wrapped in an authz MsgExec so it uses our allowances to send
+    let msg_exec = MsgExec {
+        grantee: env.contract.address.to_string(),
+        msgs: vec![Any {
+            type_url: MsgSend::type_url(),
+            value: msg_send.encode_to_vec().into(),
+        }],
+    };
+    // Converted into opaque protobut AnyMsg for wasmd to handle
+    let any_msg = AnyMsg {
+        type_url: MsgExec::type_url(),
+        value: msg_exec.encode_to_vec().into(),
     };
 
     Ok(Response::new()
-        .add_message(msg)
+        .add_message(any_msg)
         .add_attribute("method", "send_payment")
         .add_attribute("from_tg", from_tg)
         .add_attribute("to_tg", to_tg)

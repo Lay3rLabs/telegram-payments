@@ -37,4 +37,4 @@ tasks:
   on-chain:
     cmds:
       - echo "Testing on-chain"
-      - cd packages/tests/on-chain && cargo test
+      - cd packages/tests/on-chain && cargo test -- --test-threads 1
