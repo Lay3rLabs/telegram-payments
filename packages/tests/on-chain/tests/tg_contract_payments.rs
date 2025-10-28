@@ -4,7 +4,7 @@ use layer_climb::proto::Coin as ProtoCoin;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
 use tg_contract_api::payments::msg::ExecuteMsg;
 use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
-use tg_utils::tracing::tracing_init;
+use tg_utils::{faucet, tracing::tracing_init};
 
 #[tokio::test]
 async fn get_admin() {
@@ -54,10 +54,13 @@ async fn fund_account_and_send_workflow() {
     let tg_bob = "@bob";
     let bob_addr = app_client.rand_addr().await; // Bob just needs to watch
 
-    // TODO: Give some tokens to Alice
+    // Give some tokens to Alice
+    let granter_addr: Address = CosmosAddr::try_from(&alice_addr).unwrap().into();
+    faucet::tap(&granter_addr, None).await.unwrap();
 
     // TODO: Query balance of alice (non-zero), bob (zero)
-
+    // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
+    
     // WAVS Admin registers Alice to receive payments
     shared_tests::payments::register_recieves_open_account(
         &payments.querier,
@@ -81,7 +84,7 @@ async fn fund_account_and_send_workflow() {
     .await;
 
     // Alice registers to send funds and gives grant message in one tx
-    let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
+    let grant = cosmwasm_std::coin(500_000_000u128, "untrn");
     let (msg1, msg2) = build_registration_messages(
         &app_client,
         tg_alice,
@@ -117,7 +120,7 @@ async fn fund_account_and_send_workflow() {
     // WAVS Admin triggers send from alice to bob
     payments
         .executor
-        .send_payment(tg_alice, tg_bob, 1_000_000_000u128, "untrn")
+        .send_payment(tg_alice, tg_bob, 200_000_000u128, "untrn")
         .await
         .unwrap();
 
