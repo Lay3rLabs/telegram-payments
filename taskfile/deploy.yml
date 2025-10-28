@@ -2,12 +2,14 @@ version: "3"
 
 tasks:
   contract-upload:
+    deps: [assert-account-exists]
     requires:
       vars: [CONTRACT, FILENAME]
     cmds:
       - cd packages/cli && cargo run upload-contract --kind {{.CONTRACT}} --output-filename={{.FILENAME}}
 
   contract-instantiate-payments:
+    deps: [assert-account-exists]
     requires:
       vars: [FILENAME, CODE_ID]
     cmds:
@@ -17,7 +19,7 @@ tasks:
     cmds:
       - cd packages/cli && cargo run faucet-tap
 
-  upload-component:
+  component-upload:
     requires:
       vars: [COMPONENT, FILENAME]
     vars:
@@ -27,6 +29,7 @@ tasks:
       - cd packages/cli && cargo run upload-component --kind {{.COMPONENT}} --output-filename={{.FILENAME}} --ipfs-api-url {{.IPFS_API_URL}} --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
 
   middleware-service-manager-upload:
+    deps: [assert-account-exists]
     requires:
       vars: [FILENAME]
     cmds:
@@ -44,6 +47,7 @@ tasks:
         --output-path "/output/{{.FILENAME}}"
 
   middleware-stake-registry-upload:
+    deps: [assert-account-exists]
     requires:
       vars: [FILENAME]
     cmds:
@@ -61,6 +65,7 @@ tasks:
         --output-path "/output/{{.FILENAME}}"
 
   middleware-instantiate:
+    deps: [assert-account-exists]
     requires:
       vars: [MANAGER_CODE_ID, REGISTRY_CODE_ID, FILENAME]
     vars:
@@ -83,3 +88,33 @@ tasks:
         --threshold-weight {{.THRESHOLD}}
         --strategy {{.STRATEGIES}}
         --output-path "/output/{{.FILENAME}}"
+
+  service-upload:
+    requires:
+      vars:
+        [
+          CONTRACT_PAYMENTS,
+          MIDDLEWARE,
+          COMPONENT_OPERATOR,
+          COMPONENT_AGGREGATOR,
+          FILENAME,
+        ]
+    vars:
+      IPFS_API_URL: "http://127.0.0.1:{{.IPFS_API_PORT}}"
+      IPFS_GATEWAY_URL: "http://127.0.0.1:{{.IPFS_GATEWAY_PORT}}"
+      AGGREGATOR_URL: "http://127.0.0.1:{{.WAVS_AGGREGATOR_PORT}}"
+    cmds:
+      - >
+      - cd packages/cli && cargo run upload-service
+        --output-filename={{.FILENAME}}
+        --ipfs-api-url {{.IPFS_API_URL}}
+        --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
+        --contract-payments-instantiation-file "{{.CONTRACT_PAYMENTS}}"
+        --middleware-instantiation-file "{{.MIDDLEWARE}}"
+        --component-operator-cid-file "{{.COMPONENT_OPERATOR}}"
+        --component-aggregator-cid-file "{{.COMPONENT_AGGREGATOR}}"
+        --aggregator-url {{.AGGREGATOR_URL}}
+
+  assert-account-exists:
+    cmds:
+      - cd packages/cli && cargo run assert-account-exists

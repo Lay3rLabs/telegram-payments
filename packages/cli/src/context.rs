@@ -26,6 +26,8 @@ impl CliContext {
             CliCommand::FaucetTap { args, .. } => args,
             CliCommand::InstantiatePayments { args, .. } => args,
             CliCommand::UploadComponent { args, .. } => args,
+            CliCommand::UploadService { args, .. } => args,
+            CliCommand::AssertAccountExists { args, .. } => args,
         }
     }
 

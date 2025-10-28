@@ -3,13 +3,21 @@ mod context;
 mod ipfs;
 mod output;
 
+use std::process::exit;
+
+use serde::{de::DeserializeOwned, Deserialize};
 use tg_utils::{faucet, tracing::tracing_init};
+use wavs_types::{
+    ComponentSource, Service, ServiceManager, SignatureKind, Submit, Trigger, Workflow,
+};
 
 use crate::{
     command::{AuthKind, CliCommand, ContractKind},
     context::CliContext,
     ipfs::IpfsFile,
-    output::OutputData,
+    output::{
+        OutputComponentUpload, OutputContractInstantiate, OutputContractUpload, OutputServiceUpload,
+    },
 };
 
 #[tokio::main(flavor = "multi_thread")]
@@ -22,6 +30,28 @@ async fn main() {
     let ctx = CliContext::new().await;
 
     match ctx.command.clone() {
+        CliCommand::AssertAccountExists { addr, args: _ } => {
+            let client = ctx.query_client().await.unwrap();
+            let addr = match addr {
+                Some(addr) => ctx.parse_address(&addr).await.unwrap(),
+                None => ctx.wallet_addr().await.unwrap(),
+            };
+            let balance = client
+                .balance(addr.clone(), None)
+                .await
+                .unwrap()
+                .unwrap_or_default();
+
+            if balance == 0 {
+                eprintln!(
+                    "{} has zero balance. Please fund the wallet before proceeding.",
+                    addr
+                );
+                exit(1);
+            } else {
+                println!("{} balance: {}", addr, balance);
+            }
+        }
         CliCommand::UploadContract { kind, args } => {
             let client = ctx.signing_client().await.unwrap();
 
@@ -33,7 +63,7 @@ async fn main() {
             println!("Uploaded {kind} contract with code ID: {code_id}");
 
             args.output()
-                .write(OutputData::ContractUpload {
+                .write(OutputContractUpload {
                     kind,
                     code_id,
                     tx_hash: tx_resp.txhash,
@@ -85,7 +115,7 @@ async fn main() {
             println!("Instantiated Payments contract at address: {contract_addr}");
 
             args.output()
-                .write(OutputData::ContractInstantiate {
+                .write(OutputContractInstantiate {
                     kind: ContractKind::Payments,
                     address: contract_addr.to_string(),
                     tx_hash: tx_resp.txhash,
@@ -147,7 +177,7 @@ async fn main() {
             } = resp;
 
             args.output()
-                .write(OutputData::ComponentUpload {
+                .write(OutputComponentUpload {
                     kind,
                     digest,
                     cid,
@@ -156,6 +186,158 @@ async fn main() {
                 })
                 .await
                 .unwrap();
+        }
+        CliCommand::UploadService {
+            args,
+            ipfs_api_url,
+            ipfs_gateway_url,
+            contract_payments_instantiation_file,
+            component_operator_cid_file,
+            component_aggregator_cid_file,
+            middleware_instantiation_file,
+            aggregator_url,
+        } => {
+            let output_directory = args.output().directory;
+
+            let contract_payments_instantiation_file =
+                output_directory.join(contract_payments_instantiation_file);
+            let component_operator_cid_file = output_directory.join(component_operator_cid_file);
+            let component_aggregator_cid_file =
+                output_directory.join(component_aggregator_cid_file);
+            let middleware_instantiation_file =
+                output_directory.join(middleware_instantiation_file);
+
+            async fn read_and_decode<T: DeserializeOwned>(path: std::path::PathBuf) -> T {
+                match tokio::fs::read_to_string(&path).await {
+                    Err(e) => {
+                        panic!("Failed to read file {}: {}", path.display(), e);
+                    }
+                    Ok(content) => match serde_json::from_str(&content) {
+                        Err(e) => {
+                            panic!("Failed to decode JSON from file {}: {}", path.display(), e);
+                        }
+                        Ok(data) => data,
+                    },
+                }
+            }
+
+            let contract_payments: OutputContractInstantiate =
+                read_and_decode(contract_payments_instantiation_file).await;
+
+            let component_operator: OutputComponentUpload =
+                read_and_decode(component_operator_cid_file).await;
+
+            let component_aggregator: OutputComponentUpload =
+                read_and_decode(component_aggregator_cid_file).await;
+
+            #[derive(Debug, Deserialize)]
+            struct MiddlewareInstantiation {
+                pub address: String,
+            }
+
+            let middleware_instantiation: MiddlewareInstantiation =
+                read_and_decode(middleware_instantiation_file).await;
+
+            let trigger = Trigger::Cron {
+                schedule: "*/5 * * * *".to_string(), // every 5 minutes
+                start_time: None,
+                end_time: None,
+            };
+
+            let operator_component = wavs_types::Component {
+                source: ComponentSource::Download {
+                    uri: component_operator.uri.parse().unwrap(),
+                    digest: component_operator.digest,
+                },
+                permissions: wavs_types::Permissions {
+                    allowed_http_hosts: wavs_types::AllowedHostPermission::All,
+                    file_system: false,
+                },
+                fuel_limit: None,
+                time_limit_seconds: None,
+                config: Default::default(),
+                env_keys: Default::default(),
+            };
+
+            let aggregator_component = wavs_types::Component {
+                source: ComponentSource::Download {
+                    uri: component_aggregator.uri.parse().unwrap(),
+                    digest: component_aggregator.digest,
+                },
+                permissions: wavs_types::Permissions {
+                    allowed_http_hosts: wavs_types::AllowedHostPermission::All,
+                    file_system: false,
+                },
+                fuel_limit: None,
+                time_limit_seconds: None,
+                config: [
+                    (
+                        "PAYMENTS_CONTRACT_ADDRESS".to_string(),
+                        contract_payments.address,
+                    ),
+                    ("CHAIN".to_string(), args.chain.to_string()),
+                ]
+                .into_iter()
+                .collect(),
+                env_keys: Default::default(),
+            };
+
+            let submit = Submit::Aggregator {
+                url: aggregator_url.to_string(),
+                component: Box::new(aggregator_component),
+                signature_kind: SignatureKind::evm_default(),
+            };
+
+            let workflow = Workflow {
+                trigger,
+                component: operator_component,
+                submit,
+            };
+
+            let service = Service {
+                name: "Telegram Payments".to_string(),
+                workflows: [("workflow-1".parse().unwrap(), workflow)]
+                    .into_iter()
+                    .collect(),
+                status: wavs_types::ServiceStatus::Active,
+                manager: ServiceManager::Cosmos {
+                    chain: args.chain.clone(),
+                    address: middleware_instantiation.address.parse().unwrap(),
+                },
+            };
+
+            let bytes = serde_json::to_vec_pretty(&service).unwrap();
+
+            let digest = wavs_types::ServiceDigest::hash(&bytes);
+
+            let resp = IpfsFile::upload(
+                bytes,
+                &format!("service.json"),
+                ipfs_api_url.as_ref(),
+                ipfs_gateway_url.as_ref(),
+                true,
+            )
+            .await
+            .unwrap();
+
+            let IpfsFile {
+                cid,
+                uri,
+                gateway_url,
+            } = resp;
+
+            args.output()
+                .write(OutputServiceUpload {
+                    service,
+                    digest,
+                    cid,
+                    uri: uri.clone(),
+                    gateway_url,
+                })
+                .await
+                .unwrap();
+
+            println!("\nService URI: {}\n", uri);
         }
     }
 }
