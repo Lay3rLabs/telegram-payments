@@ -1,14 +1,15 @@
 //! Contract-specific abstraction for different backends (Climb, Climb Pool, MultiTest)
 //! Define helper methods here and they'll be available for all backends
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint256};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 use crate::client::{AnyExecutor, AnyQuerier, AnyTxResponse};
 
 use tg_contract_api::payments::msg::{
-    AdminResponse, ChainAddrResponse, ExecuteMsg, QueryMsg, RegisterReceiveMsg, TgHandleResponse,
+    AdminResponse, ChainAddrResponse, ExecuteMsg, QueryMsg, RegisterReceiveMsg, SendPaymentMsg,
+    TgHandleResponse,
 };
 
 #[derive(Clone)]
@@ -88,6 +89,25 @@ impl PaymentsExecutor {
             &ExecuteMsg::RegisterReceive(RegisterReceiveMsg {
                 tg_handle,
                 chain_addr: user_addr.to_string(),
+            }),
+            &[],
+        )
+        .await
+    }
+
+    pub async fn send_payment(
+        &self,
+        from_tg: &str,
+        to_tg: &str,
+        amount: impl Into<Uint256>,
+        denom: &str,
+    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
+        self.exec(
+            &ExecuteMsg::SendPayment(SendPaymentMsg {
+                from_tg: from_tg.to_string(),
+                to_tg: to_tg.to_string(),
+                amount: amount.into(),
+                denom: denom.to_string(),
             }),
             &[],
         )
