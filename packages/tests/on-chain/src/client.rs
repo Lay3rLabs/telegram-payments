@@ -1,10 +1,10 @@
 //! Abstraction specifically for the on-chain multi-test environment
 pub mod payments;
 
-use cosmwasm_std::Addr;
 use deadpool::managed::Pool;
 use rand::prelude::*;
 use tg_utils::{
+    addr::AnyAddr,
     client::{AnyExecutor, AnyQuerier},
     faucet,
 };
@@ -49,7 +49,7 @@ impl AppClient {
     }
 
     // TODO - something faster, like MockApi make_addr...
-    pub async fn rand_addr(&self) -> Addr {
+    pub async fn rand_address(&self) -> AnyAddr {
         let mut rng = rand::rng();
         let entropy: [u8; 32] = rng.random();
         let mnemonic = bip39::Mnemonic::from_entropy(&entropy).unwrap().to_string();
@@ -61,7 +61,7 @@ impl AppClient {
             .address_from_pub_key(&signer.public_key().await.unwrap())
             .unwrap();
 
-        Addr::unchecked(addr.to_string())
+        addr.into()
     }
 
     pub async fn rand_signing_client(&self) -> SigningClient {
@@ -73,7 +73,7 @@ impl AppClient {
 
         // This needs funding first, otherwise you cannot query sequence and account number
         let signer_addr = signer.address(&self.chain_config).await.unwrap();
-        faucet::tap(&signer_addr, None).await.unwrap();
+        faucet::tap(&signer_addr, None, None).await.unwrap();
 
         SigningClient::new(self.chain_config.clone(), signer, None)
             .await
@@ -118,7 +118,7 @@ impl TestPool {
         if balance < 10000000000 {
             tracing::info!("{} has balance of {}, sending some funds...", addr, balance);
 
-            faucet::tap(&addr, None).await.unwrap();
+            faucet::tap(&addr, None, None).await.unwrap();
             let new_balance = querier
                 .balance(addr, None)
                 .await

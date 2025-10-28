@@ -25,7 +25,9 @@ async fn register_receive_creates_open_account() {
         &payments.querier,
         &payments.executor,
         RegisterReceivesOpenAccountProps {
-            user_addr: app_client.with_app(|app| app.api().addr_make("user123")),
+            user_addr: app_client
+                .with_app(|app| app.api().addr_make("user123"))
+                .into(),
             tg_handle: "@alice".to_string(),
         },
     )
@@ -47,14 +49,14 @@ async fn register_receive_prevents_duplicate_tg_handle() {
     // Register first user
     payments
         .executor
-        .register_receive(tg_handle.clone(), user1_addr.clone())
+        .register_receive(tg_handle.clone(), &user1_addr.into())
         .await
         .unwrap();
 
     // Try to register second user with same Telegram handle - should fail
     let err = payments
         .executor
-        .register_receive(tg_handle.clone(), user2_addr.clone())
+        .register_receive(tg_handle.clone(), &user2_addr.into())
         .await
         .unwrap_err();
 
@@ -82,7 +84,7 @@ async fn register_receive_requires_admin() {
     // Try to register user with unauthorized client - should fail
     let err = payments
         .executor
-        .register_receive(tg_handle.clone(), user_addr.clone())
+        .register_receive(tg_handle.clone(), &user_addr.into())
         .await
         .unwrap_err();
 
