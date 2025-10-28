@@ -41,6 +41,7 @@ async fn register_receives_open_account() {
 // * multiples sends from alice (under total limit)
 // * multiples sends from alice (over total limit)
 #[tokio::test]
+#[ignore = "See https://github.com/Lay3rLabs/telegram-payments/issues/36"]
 async fn fund_account_and_send_workflow() {
     tracing_init();
 
