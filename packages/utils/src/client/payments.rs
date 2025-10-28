@@ -1,6 +1,7 @@
 //! Contract-specific abstraction for different backends (Climb, Climb Pool, MultiTest)
 //! Define helper methods here and they'll be available for all backends
 
+use anyhow::Result;
 use cosmwasm_std::{Addr, Uint256};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -25,20 +26,17 @@ impl PaymentsQuerier {
     pub async fn query<RESP: DeserializeOwned + Send + Sync + Debug>(
         &self,
         msg: &QueryMsg,
-    ) -> Result<RESP, cosmwasm_std::StdError> {
+    ) -> Result<RESP> {
         self.inner.contract_query(&self.addr, msg).await
     }
 
-    pub async fn admin(&self) -> Result<Option<String>, cosmwasm_std::StdError> {
+    pub async fn admin(&self) -> Result<Option<String>> {
         let resp: AdminResponse = self.query(&QueryMsg::Admin {}).await?;
 
         Ok(resp.admin)
     }
 
-    pub async fn addr_by_tg_handle(
-        &self,
-        tg_handle: String,
-    ) -> Result<Option<String>, cosmwasm_std::StdError> {
+    pub async fn addr_by_tg_handle(&self, tg_handle: String) -> Result<Option<String>> {
         let resp: ChainAddrResponse = self
             .query(&QueryMsg::AddrByTg { handle: tg_handle })
             .await?;
@@ -46,10 +44,7 @@ impl PaymentsQuerier {
         Ok(resp.addr)
     }
 
-    pub async fn tg_handle_by_addr(
-        &self,
-        user_addr: String,
-    ) -> Result<Option<String>, cosmwasm_std::StdError> {
+    pub async fn tg_handle_by_addr(&self, user_addr: String) -> Result<Option<String>> {
         let resp: TgHandleResponse = self
             .query(&QueryMsg::TgByAddr { account: user_addr })
             .await?;
@@ -57,7 +52,7 @@ impl PaymentsQuerier {
         Ok(resp.handle)
     }
 
-    pub async fn allowed_denoms(&self) -> Result<Vec<String>, cosmwasm_std::StdError> {
+    pub async fn allowed_denoms(&self) -> Result<Vec<String>> {
         self.query(&QueryMsg::AllowedDenoms {}).await
     }
 }
@@ -76,7 +71,7 @@ impl PaymentsExecutor {
         &self,
         msg: &ExecuteMsg,
         funds: &[cosmwasm_std::Coin],
-    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
+    ) -> Result<AnyTxResponse> {
         self.inner.contract_exec(&self.addr, msg, funds).await
     }
 
@@ -84,7 +79,7 @@ impl PaymentsExecutor {
         &self,
         tg_handle: String,
         user_addr: Addr,
-    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
+    ) -> Result<AnyTxResponse> {
         self.exec(
             &ExecuteMsg::RegisterReceive(RegisterReceiveMsg {
                 tg_handle,
@@ -101,7 +96,7 @@ impl PaymentsExecutor {
         to_tg: &str,
         amount: impl Into<Uint256>,
         denom: &str,
-    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
+    ) -> Result<AnyTxResponse> {
         self.exec(
             &ExecuteMsg::SendPayment(SendPaymentMsg {
                 from_tg: from_tg.to_string(),
