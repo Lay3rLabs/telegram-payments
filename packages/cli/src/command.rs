@@ -1,7 +1,8 @@
-use crate::output::{Output, OutputFormat};
+use crate::output::OutputFormat;
 use clap::{Parser, ValueEnum};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tg_utils::path::repo_root;
 use wavs_types::ChainKey;
 
@@ -49,6 +50,32 @@ pub enum CliCommand {
         #[clap(flatten)]
         args: CliArgs,
     },
+    /// Upload a component to IPFS
+    UploadService {
+        #[arg(long)]
+        contract_payments_instantiation_file: PathBuf,
+
+        #[arg(long)]
+        middleware_instantiation_file: PathBuf,
+
+        #[arg(long)]
+        component_operator_cid_file: PathBuf,
+
+        #[arg(long)]
+        component_aggregator_cid_file: PathBuf,
+
+        #[arg(long)]
+        aggregator_url: Url,
+
+        #[arg(long)]
+        ipfs_api_url: Url,
+
+        #[arg(long)]
+        ipfs_gateway_url: Url,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
     FaucetTap {
         /// if not supplied, will be the one in CLI_MNEMONIC
         addr: Option<String>,
@@ -56,6 +83,11 @@ pub enum CliCommand {
         amount: Option<u128>,
         /// if not supplied, will be the default
         denom: Option<String>,
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    AssertAccountExists {
+        addr: Option<String>,
         #[clap(flatten)]
         args: CliArgs,
     },
@@ -75,29 +107,6 @@ pub struct CliArgs {
     /// Output format for any generated files
     #[clap(long, value_enum, default_value_t = OutputFormat::Json)]
     pub output_format: OutputFormat,
-}
-
-impl CliArgs {
-    pub fn output(&self) -> Output {
-        let output_path = repo_root()
-            .expect("could not determine repo root")
-            .join("builds")
-            .join("deployments")
-            .join(&self.output_filename);
-
-        // Ensure the output directory exists
-        std::fs::create_dir_all(output_path.parent().unwrap()).unwrap_or_else(|_| {
-            panic!(
-                "Failed to create output directory: {}",
-                output_path.parent().unwrap().display()
-            )
-        });
-
-        Output {
-            path: output_path,
-            format: self.output_format,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, ValueEnum)]
