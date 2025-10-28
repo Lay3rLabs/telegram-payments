@@ -4,24 +4,23 @@ See [GettingStarted.md](./GettingStarted.md) for initial setup instructions.
 
 This document assumes you have already:
 
-1. Built everything:
-
-```bash
-task contracts:build-all && task components:build-all
-```
-
-2. Started the backend
+1. Started the backend
 
 ```bash
 task backend:start-all
 ```
 
-3. Funded the wallets
+2. Funded the wallets
 
 ```bash
 task deploy:tap-faucet-all
 ```
 
+3. Built everything:
+
+```bash
+task contracts:build-all && task components:build-all
+```
 
 Ultimately, deploying consists of the following steps:
 
