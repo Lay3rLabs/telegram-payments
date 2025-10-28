@@ -6,6 +6,9 @@ authors.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 tg-contract-api = { workspace = true }
 layer-climb = { workspace = true }
@@ -18,10 +21,4 @@ wit-bindgen-rt = { workspace = true }
 thiserror = { workspace = true }
 cosmwasm-std = { workspace = true }
 wavs-types = {workspace = true}
-
-[lib]
-crate-type = ["cdylib"]
-
-[package.metadata.component]
-package = "component:tg-component-operator"
-target = "wavs:operator/wavs-world@2.0.0"
+wit-bindgen = {workspace = true}
