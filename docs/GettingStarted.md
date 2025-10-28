@@ -86,44 +86,24 @@ task backend:start-server-watch
 
 ### WAVS Operator
 
-Start the operator node
+Start the operator, aggregator, and telemetry
 ```bash
-task backend:start-wavs-operator
+# Alternatively, if you need more than one operator
+# task backend:start-wavs OPERATORS=3
+task backend:start-wavs
 ```
 
-Stop the operator node
+Stop the operator, aggregator, and telemetry
 ```bash
-task backend:stop-wavs-operator
-```
-
-### WAVS Aggregator
-
-Start the aggregator node
-```bash
-task backend:start-wavs-aggregator
-```
-
-Stop the aggregator node
-```bash
-task backend:stop-wavs-aggregator
-```
-
-### Telemetry
-
-Start Jaeger and Prometheus
-```bash
-task backend:start-telemetry
-```
-
-Stop Jaeger and Prometheus
-```bash
-task backend:stop-Telemetry
+task backend:stop-wavs
 ```
 
 ### All Backend Services At Once
 
 Start all backend services
 ```bash
+# Alternatively, if you need more than one operator
+# task backend:start-all OPERATORS=3
 task backend:start-all
 ```
 

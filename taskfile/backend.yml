@@ -4,8 +4,31 @@ includes:
   config:
     taskfile: ./config.yml
     flatten: true
+env:
+  # avoid namespace conflicts with other env vars
+  # see https://github.com/go-task/task/issues/1038
+  COMPOSE_WAVS_DOCKER_IMAGE: "{{.WAVS_DOCKER_IMAGE}}"
+  COMPOSE_JAEGER_DOCKER_IMAGE: "{{.JAEGER_DOCKER_IMAGE}}"
+  COMPOSE_PROMETHEUS_DOCKER_IMAGE: "{{.PROMETHEUS_DOCKER_IMAGE}}"
+  COMPOSE_WAVS_HOME: "{{.WAVS_HOME_DIR}}"
 
 tasks:
+  start-all:
+    vars:
+      OPERATORS: '{{.OPERATORS | default "1"}}'
+    deps:
+      [
+        { task: start-wavs, vars: { OPERATORS: "{{.OPERATORS}}" } },
+        { task: start-chains },
+      ]
+
+  stop-all:
+    deps: [stop-wavs, stop-chains]
+
+  ###################################################################
+  ######################## CHAINS ###################################
+  ###################################################################
+
   start-chains:
     cmds:
       - "{{.CHAINS_DIR}}/start_neutron.sh"
@@ -15,6 +38,10 @@ tasks:
       - docker kill neutron-local || true
       - docker rm neutron-local || true
 
+  ###################################################################
+  ######################## SERVER ###################################
+  ###################################################################
+  #
   start-server:
     desc: "Start the backend server"
     cmds:
@@ -29,11 +56,11 @@ tasks:
   ######################## WAVS #####################################
   ###################################################################
 
-  start-wavs-operator:
+  start-wavs:
     desc: "Start WAVS operator instances, aggregator, and telemetry"
     preconditions:
       - test -f "{{.DOCKER_DIR}}/wavs-aggregator.yml"
-      - test -f "{{.DOCKER_DIR}}/wavs-instance.yml"
+      - test -f "{{.DOCKER_DIR}}/wavs-operator.yml"
       - test -f "{{.DOCKER_DIR}}/wavs-telemetry.yml"
       - test -f "{{.DOCKER_DIR}}/wavs-telemetry-prometheus.yml"
       - sh: "command -v docker"
@@ -51,12 +78,12 @@ tasks:
     cmds:
       - |
         {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-aggregator.yml" pull
-        {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-instance.yml" pull
+        {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-operator.yml" pull
 
   stop-wavs:
     desc: "Stop all WAVS instances, aggregator, and telemetry"
     cmds:
-      - task: stop-wavs-instances
+      - task: stop-wavs-operators
       - task: stop-wavs-aggregator
       - task: stop-wavs-telemetry
 
@@ -94,7 +121,6 @@ tasks:
       - echo "Aggregator is up!"
 
   start-wavs-operator-*:
-    internal: true
     vars:
       WAVS_INSTANCE: "{{index .MATCH 0}}"
       WAVS_PORT:
@@ -146,7 +172,7 @@ tasks:
       - |
         echo "Starting WAVS #{{.WAVS_INSTANCE}} on port $COMPOSE_WAVS_PORT"
       - |
-        {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-instance.yml" up --force-recreate -d
+        {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-operator.yml" up --force-recreate -d
 
   stop-wavs-aggregator:
     internal: true
@@ -156,7 +182,7 @@ tasks:
       - |
         {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-aggregator.yml" down --remove-orphans --volumes
 
-  stop-wavs-instances:
+  stop-wavs-operators:
     desc: "Stop all WAVS operator instances"
     cmds:
       - |
@@ -165,14 +191,14 @@ tasks:
         if [ -n "$containers" ]; then
           for project_name in $containers; do
             echo "Stopping compose project: $project_name"
-            {{.DOCKER_SUDO}} docker compose --project-name "$project_name" --file "{{.DOCKER_DIR}}/wavs-instance.yml" down --remove-orphans --volumes
+            {{.DOCKER_SUDO}} docker compose --project-name "$project_name" --file "{{.DOCKER_DIR}}/wavs-operator.yml" down --remove-orphans --volumes
           done
         else
           echo "No WAVS operator containers found"
         fi
 
   # HELPERS
-  get-wavs-operator-operator-port-*:
+  get-wavs-operator-port-*:
     desc: "Get the WAVS port for a wavs number"
     vars:
       WAVS_INSTANCE: "{{index .MATCH 0}}"
