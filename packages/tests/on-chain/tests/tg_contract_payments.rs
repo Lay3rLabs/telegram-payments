@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_vec, Addr};
+use cosmwasm_std::Addr;
 use layer_climb::prelude::*;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
 use tg_contract_api::payments::msg::ExecuteMsg;
@@ -49,8 +49,7 @@ async fn fund_account_and_send_workflow() {
 
     // Alice will send
     let tg_alice = "@alice";
-    let alice = app_client.rand_signing_client().await;
-    let alice_addr = alice.addr.clone();
+    let alice_signer = app_client.rand_signing_client().await; // TODO: we need a real key here to sign with
     let tg_bob = "@bob";
     let bob_addr = app_client.rand_addr().await; // Bob just needs to watch
 
@@ -58,17 +57,21 @@ async fn fund_account_and_send_workflow() {
     println!("Bob: {}", &bob_addr);
 
     // Give some tokens to Alice
-    faucet::tap(&alice_addr, None).await.unwrap();
+    faucet::tap(&alice_signer.addr, None, None).await.unwrap();
 
     // TODO: Query balance of alice (non-zero), bob (zero)
     // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
 
     // WAVS Admin registers Alice to receive payments
-    let cw_alice_addr = Addr::unchecked(alice_addr.to_string());
-    payments.executor
-        .register_receive(tg_alice.to_string(), cw_alice_addr.clone())
-        .await
-        .unwrap();
+    shared_tests::payments::register_recieves_open_account(
+        &payments.querier,
+        &payments.executor,
+        RegisterReceivesOpenAccountProps {
+            tg_handle: tg_alice.to_string(),
+            user_addr: Addr::unchecked(alice_signer.addr.to_string()),
+        },
+    )
+    .await;
 
     // WAVS Admin registers Bob to receive payments
     payments.executor
@@ -79,62 +82,21 @@ async fn fund_account_and_send_workflow() {
     // Alice registers to send funds and gives grant message in one tx
     let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
 
-    let granter_addr: Address = CosmosAddr::try_from(&alice_addr).unwrap().into();
-    let grantee_addr: Address = CosmosAddr::try_from(&bob_addr).unwrap().into();
-
-    // FIXME: temporarily just trying to get any basic granting to work...
-    tracing::info!("Sending fees to make sure accounts exist");
-
-    faucet::tap(&granter_addr, Some(2_000_000_000u128), None)
-        .await
-        .unwrap();
-
-    faucet::tap(&grantee_addr, None, None).await.unwrap();
-
-    eprintln!(
-        "Attempting to grant from {} to {}",
-        granter_addr, grantee_addr
-    );
+    let (msg1, msg2) =
+        build_registration_messages(&alice_signer, tg_alice, &payments.querier.addr, grant).await;
 
     app_client
         .pool()
         .get()
         .await
         .unwrap()
-        .authz_grant_send(
-            granter_addr,
-            grantee_addr,
-            vec![ProtoCoin {
-                denom: grant.denom,
-                amount: grant.amount.to_string(),
-            }],
-            vec![],
-            None,
-        )
+        .tx_builder()
+        .broadcast([
+            proto_into_any(&msg1).unwrap(),
+            proto_into_any(&msg2).unwrap(),
+        ])
         .await
         .unwrap();
-
-    // let (msg1, msg2) = build_registration_messages(
-    //     &app_client,
-    //     tg_alice,
-    //     &alice_addr,
-    //     &payments.querier.addr,
-    //     grant,
-    // )
-    // .await;
-
-    // app_client
-    //     .pool()
-    //     .get()
-    //     .await
-    //     .unwrap()
-    //     .tx_builder()
-    //     .broadcast([
-    //         proto_into_any(&msg1).unwrap(),
-    //         proto_into_any(&msg2).unwrap(),
-    //     ])
-    //     .await
-    //     .unwrap();
 
     // Query alice reverse mapping is now set
     assert_eq!(
@@ -143,7 +105,7 @@ async fn fund_account_and_send_workflow() {
             .addr_by_tg_handle(tg_alice.to_string())
             .await
             .unwrap(),
-        Some(alice_addr.to_string())
+        Some(alice_signer.addr.to_string())
     );
     assert_eq!(
         payments
@@ -167,33 +129,27 @@ async fn fund_account_and_send_workflow() {
 /// This builds messages for a user to register and grant permission to send on their behalf.
 /// It must be signed by the users private key and then submitted as a multi-msg tx
 async fn build_registration_messages(
-    app_client: &AppClient,
+    granter: &SigningClient,
     tg_handle: &str,
-    user_addr: &Address,
     contract_addr: &Addr,
     grant_amount: cosmwasm_std::Coin,
 ) -> (
     layer_climb_proto::wasm::MsgExecuteContract,
     layer_climb_proto::authz::MsgGrant,
 ) {
-    let signing_client = app_client.pool().get().await.unwrap();
-
     let contract_addr: Address = CosmosAddr::try_from(contract_addr).unwrap().into();
 
     let register_msg = ExecuteMsg::RegisterSend {
         tg_handle: tg_handle.to_string(),
     };
 
-    let exec_msg = layer_climb_proto::wasm::MsgExecuteContract {
-        sender: user_addr.to_string(),
-        contract: contract_addr.to_string(),
-        msg: to_json_vec(&register_msg).unwrap(),
-        funds: vec![],
-    };
+    let exec_msg = granter
+        .contract_execute_msg(&contract_addr, vec![], &register_msg)
+        .unwrap();
 
-    let grant_msg = signing_client
+    let grant_msg = granter
         .authz_grant_send_msg(
-            Some(user_addr.clone()),
+            None,
             contract_addr,
             vec![grant_amount.to_proto_coin()],
             vec![],
