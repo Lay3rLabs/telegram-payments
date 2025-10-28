@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "codegen": "node codegen.js"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.36.2",
@@ -23,6 +24,7 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@cosmwasm/ts-codegen": "^1.13.3",
     "@eslint/js": "^9.36.0",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
