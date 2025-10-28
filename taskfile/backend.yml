@@ -8,9 +8,19 @@ includes:
 tasks:
   start-chains:
     cmds:
-      - sh "{{.CHAINS_DIR}}/start_neutron.sh"
+      - "{{.CHAINS_DIR}}/start_neutron.sh"
 
   stop-chains:
     cmds:
       - docker kill neutron-local || true
       - docker rm neutron-local || true
+
+  start-server:
+    desc: "Start the backend server"
+    cmds:
+      - cd packages/server && cargo run
+
+  start-server-watch:
+    desc: "Start the backend server in watch mode (auto-restart on code changes)"
+    cmds:
+      - cd packages/server && watchexec --restart --clear --delay-run 1s -e rs,toml -w . -w ../utils -w ../contracts/api -- cargo run

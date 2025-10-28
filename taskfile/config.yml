@@ -17,6 +17,9 @@ vars:
   ARTIFACTS_PATH: '{{joinPath .REPO_ROOT "builds"}}'
   COMPONENTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "components"}}'
   CONTRACTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "contracts"}}'
+  SERVER_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "server"}}'
+  SERVER_PID_FILE: '{{joinPath .SERVER_ARTIFACTS_PATH "server.pid"}}'
+  SERVER_LOG_FILE: '{{joinPath .SERVER_ARTIFACTS_PATH "server.log"}}'
   CONTRACT_PREFIX: "tg_contract"
   COMPONENT_PREFIX: "tg_component"
   CW_OPTIMIZER_CACHE: "wavs-telegram-payments"
