@@ -4,6 +4,7 @@
 
 1. The usual stuff (Rust, Docker, NPM, etc.)
 2. [Taskfile](https://taskfile.dev/installation)
+3. [Install watchexec](https://github.com/watchexec/watchexec?tab=readme-ov-file#install)
 3. Copy `.example.env` to `.env` and replace the values
 
 ## Building
@@ -19,6 +20,84 @@ task contracts:build-all
 _STATUS: TODO_
 ```bash
 task components:build-all
+```
+
+## Backend
+
+### Chains
+
+It may take a while for the chain to startup, be patient... chains will be running in the background via docker and do not require their own terminal
+
+Start the chains
+```bash
+task backend:start-chains
+```
+
+Stop the chains
+```bash
+task backend:stop-chains
+```
+
+### Webhook Server
+
+The server runs in the forground and therefore requires its own terminal
+
+Start the server
+```bash
+task backend:start-server
+```
+
+Start the server and watch for changes (auto-restart)
+```bash
+task backend:start-server-watch
+```
+
+### WAVS Operator
+
+Start the operator node
+```bash
+task backend:start-wavs-operator
+```
+
+Stop the operator node
+```bash
+task backend:stop-wavs-operator
+```
+
+### WAVS Aggregator
+
+Start the aggregator node
+```bash
+task backend:start-wavs-aggregator
+```
+
+Stop the aggregator node
+```bash
+task backend:stop-wavs-aggregator
+```
+
+### Telemetry
+
+Start Jaeger and Prometheus
+```bash
+task backend:start-telemetry
+```
+
+Stop Jaeger and Prometheus
+```bash
+task backend:stop-Telemetry
+```
+
+### All Backend Services At Once
+
+Start all backend services
+```bash
+task backend:start-all
+```
+
+Stop all backend services
+```bash
+task backend:stop-all
 ```
 
 ## Testing
@@ -43,15 +122,11 @@ task test:off-chain
 
 *on-chain*
 
-This requires first start the chains, running the tests, and then remembering to shut it down
-
-It may take a while for the chain to startup, be patient... recommendation is to leave it up while developing
+Make sure you've [started the chains](#chains) first
 
 ```bash
-task backend:start-chains
- # alternatively `task test:contract-on-chain CONTRACT=payments`
 task test:on-chain
-task backend:stop-chains
+# alternatively `task test:contract-on-chain CONTRACT=payments`
 ```
 
 
@@ -63,16 +138,12 @@ Just `cargo test` as needed
 
 The flow is similar to on-chain tests, and assumes the contracts are already built
 
+Make sure you've [started the backend services](#all-backend-services-at-once) first
+
 _STATUS: TODO_
 ```bash
-task backend:start-all
 task test:e2e
-task backend:stop-all
 ```
-
-It may take a while for the backend to startup, recommendation is to leave it up while developing
-
-If you already have the chains running, then run `task backend:start-wavs` instead of `task backend:start-all`
 
 Jaeger UI is at [http://localhost:16686/](http://localhost:16686/)
 Prometheus is at [http://localhost:9090/](http://localhost:9090/)
@@ -85,7 +156,7 @@ _STATUS: TODO_
 task backend:start-all OPERATORS=N
 
 # If just starting wavs, not chain
-task backend:start-wavs OPERATORS=N
+task backend:start-wavs-operator OPERATORS=N
 ```
 
 Make sure you have that number of submission wallets in your `.env`

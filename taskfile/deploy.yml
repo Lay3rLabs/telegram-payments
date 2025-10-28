@@ -1,0 +1,18 @@
+version: "3"
+
+tasks:
+  contract-upload:
+    requires:
+      vars: [CONTRACT, FILENAME]
+    cmds:
+      - cd packages/cli && cargo run upload-contract --kind {{.CONTRACT}} --output-filename={{.FILENAME}}
+
+  contract-instantiate-payments:
+    requires:
+      vars: [FILENAME, CODE_ID]
+    cmds:
+      - cd packages/cli && cargo run instantiate-payments --output-filename={{.FILENAME}} --code-id={{.CODE_ID}}
+
+  tap-faucet:
+    cmds:
+      - cd packages/cli && cargo run faucet-tap

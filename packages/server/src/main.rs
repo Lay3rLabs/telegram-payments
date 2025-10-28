@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn root() -> impl IntoResponse {
     Json(json!({
-        "message": "telegram-payments CLI server is running"
+        "message": "telegram-payments CLI server is running!"
     }))
 }
 
