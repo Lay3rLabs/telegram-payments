@@ -63,6 +63,18 @@ impl AppClient {
 
         Addr::unchecked(addr.to_string())
     }
+
+    pub async fn rand_signing_client(&self) -> SigningClient {
+        let mut rng = rand::rng();
+        let entropy: [u8; 32] = rng.random();
+        let mnemonic = bip39::Mnemonic::from_entropy(&entropy).unwrap().to_string();
+        let signer = KeySigner::new_mnemonic_str(&mnemonic, None)
+            .expect("Failed to create KeySigner from mnemonic");
+
+        SigningClient::new(self.chain_config.clone(), signer, None)
+            .await
+            .unwrap()
+    }
 }
 
 #[derive(Clone)]
