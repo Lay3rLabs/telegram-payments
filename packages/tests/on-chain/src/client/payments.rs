@@ -33,12 +33,8 @@ impl PaymentsClient {
             .await
             .unwrap();
 
-        let querier = PaymentsQuerier::new(
-            app_client.querier.clone(),
-            address.clone().try_into().unwrap(),
-        );
-        let executor =
-            PaymentsExecutor::new(client.clone().into(), address.clone().try_into().unwrap());
+        let querier = PaymentsQuerier::new(app_client.querier.clone(), address.clone().into());
+        let executor = PaymentsExecutor::new(client.clone().into(), address.clone().into());
 
         Self { querier, executor }
     }

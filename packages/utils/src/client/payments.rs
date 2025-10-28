@@ -2,11 +2,14 @@
 //! Define helper methods here and they'll be available for all backends
 
 use anyhow::Result;
-use cosmwasm_std::{Addr, Uint256};
+use cosmwasm_std::Uint256;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::client::{AnyExecutor, AnyQuerier, AnyTxResponse};
+use crate::{
+    addr::AnyAddr,
+    client::{AnyExecutor, AnyQuerier, AnyTxResponse},
+};
 
 use tg_contract_api::payments::msg::{
     AdminResponse, ChainAddrResponse, ExecuteMsg, QueryMsg, RegisterReceiveMsg, SendPaymentMsg,
@@ -16,11 +19,11 @@ use tg_contract_api::payments::msg::{
 #[derive(Clone)]
 pub struct PaymentsQuerier {
     pub inner: AnyQuerier,
-    pub addr: Addr,
+    pub addr: AnyAddr,
 }
 
 impl PaymentsQuerier {
-    pub fn new(inner: AnyQuerier, addr: Addr) -> Self {
+    pub fn new(inner: AnyQuerier, addr: AnyAddr) -> Self {
         Self { inner, addr }
     }
     pub async fn query<RESP: DeserializeOwned + Send + Sync + Debug>(
@@ -60,11 +63,11 @@ impl PaymentsQuerier {
 #[derive(Clone)]
 pub struct PaymentsExecutor {
     pub inner: AnyExecutor,
-    pub addr: Addr,
+    pub addr: AnyAddr,
 }
 
 impl PaymentsExecutor {
-    pub fn new(inner: AnyExecutor, addr: Addr) -> Self {
+    pub fn new(inner: AnyExecutor, addr: AnyAddr) -> Self {
         Self { inner, addr }
     }
     pub async fn exec(
@@ -78,7 +81,7 @@ impl PaymentsExecutor {
     pub async fn register_receive(
         &self,
         tg_handle: String,
-        user_addr: Addr,
+        user_addr: &AnyAddr,
     ) -> Result<AnyTxResponse> {
         self.exec(
             &ExecuteMsg::RegisterReceive(RegisterReceiveMsg {

@@ -1,5 +1,7 @@
-use cosmwasm_std::Addr;
-use tg_utils::client::payments::{PaymentsExecutor, PaymentsQuerier};
+use tg_utils::{
+    addr::AnyAddr,
+    client::payments::{PaymentsExecutor, PaymentsQuerier},
+};
 
 pub async fn get_admin(querier: &PaymentsQuerier, expected: &str) {
     let admin = querier.admin().await.unwrap().unwrap();
@@ -7,7 +9,7 @@ pub async fn get_admin(querier: &PaymentsQuerier, expected: &str) {
 }
 
 pub struct RegisterReceivesOpenAccountProps {
-    pub user_addr: Addr,
+    pub user_addr: AnyAddr,
     pub tg_handle: String,
 }
 
@@ -22,7 +24,7 @@ pub async fn register_recieves_open_account(
     } = props;
     // Register user to receive payments
     executor
-        .register_receive(tg_handle.clone(), user_addr.clone())
+        .register_receive(tg_handle.clone(), &user_addr)
         .await
         .unwrap();
 

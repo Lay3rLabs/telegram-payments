@@ -108,7 +108,7 @@ impl ContractKind {
             .unwrap()
             .join("builds")
             .join("contracts")
-            .join(&format!("tg_contract_{}.wasm", self.as_str()));
+            .join(format!("tg_contract_{}.wasm", self.as_str()));
 
         tokio::fs::read(&path)
             .await

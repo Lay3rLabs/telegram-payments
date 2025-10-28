@@ -29,7 +29,7 @@ async fn register_receives_open_account() {
         &payments.executor,
         RegisterReceivesOpenAccountProps {
             tg_handle: "@alice".to_string(),
-            user_addr: app_client.rand_addr().await,
+            user_addr: app_client.rand_address().await.into(),
         },
     )
     .await;
@@ -49,52 +49,67 @@ async fn fund_account_and_send_workflow() {
 
     // Alice will send
     let tg_alice = "@alice";
-    let alice_signer = app_client.rand_signing_client().await; // TODO: we need a real key here to sign with
+    let alice = app_client.rand_signing_client().await;
     let tg_bob = "@bob";
-    let bob_addr = app_client.rand_addr().await; // Bob just needs to watch
+    let bob_addr = app_client.rand_address().await; // Bob just needs to watch
 
-    println!("Alice: {}", &alice_signer.addr);
+    println!("Alice: {}", &alice.addr);
     println!("Bob: {}", &bob_addr);
 
     // Give some tokens to Alice
-    faucet::tap(&alice_signer.addr, None, None).await.unwrap();
-    // and to the contract, so it exist as a funded account
-    faucet::tap(
-        &CosmosAddr::try_from(&payments.querier.addr).unwrap().into(),
-        Some(1u128),
-        None,
-    )
-    .await
-    .unwrap();
+    faucet::tap(&alice.addr, None, None).await.unwrap();
 
-    // TODO: Query balance of alice (non-zero), bob (zero)
-    // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
+    // Query balances and assert alice (non-zero), bob (zero)
+    let alice_balance = alice
+        .querier
+        .balance(alice.addr.clone(), None)
+        .await
+        .unwrap()
+        .unwrap_or_default();
+    let bob_balance = app_client
+        .pool()
+        .get()
+        .await
+        .unwrap()
+        .querier
+        .balance(bob_addr.clone().into(), None)
+        .await
+        .unwrap()
+        .unwrap_or_default();
+
+    assert_ne!(
+        alice_balance, 0u128,
+        "alice should have been funded by faucet"
+    );
+    assert_eq!(bob_balance, 0u128, "bob should start with zero balance");
 
     // WAVS Admin registers Alice to receive payments
-    shared_tests::payments::register_recieves_open_account(
-        &payments.querier,
-        &payments.executor,
-        RegisterReceivesOpenAccountProps {
-            tg_handle: tg_alice.to_string(),
-            user_addr: Addr::unchecked(alice_signer.addr.to_string()),
-        },
-    )
-    .await;
+    payments
+        .executor
+        .register_receive(tg_alice.to_string(), &alice.addr.clone().into())
+        .await
+        .unwrap();
 
     // WAVS Admin registers Bob to receive payments
     payments
         .executor
-        .register_receive(tg_bob.to_string(), bob_addr.clone())
+        .register_receive(tg_bob.to_string(), &bob_addr)
         .await
         .unwrap();
 
     // Alice registers to send funds and gives grant message in one tx
-    let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
+    let gas_denom = &alice.querier.chain_config.gas_denom;
+    let grant = cosmwasm_std::coin(500_000_000u128, gas_denom);
 
-    let (msg1, msg2) =
-        build_registration_messages(&alice_signer, tg_alice, &payments.querier.addr, grant).await;
+    let (msg1, msg2) = build_registration_messages(
+        &alice,
+        tg_alice,
+        &payments.querier.addr.clone().into(),
+        grant,
+    )
+    .await;
 
-    alice_signer
+    alice
         .tx_builder()
         .broadcast([
             proto_into_any(&msg1).unwrap(),
@@ -103,19 +118,19 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap();
 
-    // Query alice reverse mapping is now set
+    // Query alice bidirectional mapping is now set
     assert_eq!(
         payments
             .querier
             .addr_by_tg_handle(tg_alice.to_string())
             .await
             .unwrap(),
-        Some(alice_signer.addr.to_string())
+        Some(alice.addr.to_string())
     );
     assert_eq!(
         payments
             .querier
-            .tg_handle_by_addr(alice_signer.addr.to_string())
+            .tg_handle_by_addr(alice.addr.to_string())
             .await
             .unwrap(),
         Some(tg_alice.to_string())
@@ -128,7 +143,28 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap();
 
-    // TODO: Query balances of Alice and Bob updated
+    let alice_balance_new = alice
+        .querier
+        .balance(alice.addr.clone(), None)
+        .await
+        .unwrap()
+        .unwrap_or_default();
+    let bob_balance = app_client
+        .pool()
+        .get()
+        .await
+        .unwrap()
+        .querier
+        .balance(bob_addr.into(), None)
+        .await
+        .unwrap()
+        .unwrap_or_default();
+
+    assert_ne!(
+        alice_balance, alice_balance_new,
+        "alice's balance should have changed"
+    );
+    assert_ne!(bob_balance, 0u128, "bob should no longer have zero balance");
 }
 
 /// This builds messages for a user to register and grant permission to send on their behalf.

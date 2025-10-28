@@ -1,3 +1,5 @@
+pub mod addr;
+
 pub mod client;
 cfg_if::cfg_if! {
     if #[cfg(feature = "on-chain")] {

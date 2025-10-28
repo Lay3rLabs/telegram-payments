@@ -88,6 +88,18 @@ layer-climb-address = { version = "0.8.7", features = [
 layer-climb-config = "0.8.7"
 layer-climb-cli = "0.8.7"
 layer-climb-proto = "0.8.7"
+#
+# Layer-climb, local version - keeping this commented for now as we debug
+#
+# layer-climb = {path = "../climb/packages/layer-climb"}
+# layer-climb-core = {path = "../climb/packages/layer-climb-core"}
+# layer-climb-address = { path = "../climb/packages/layer-climb-address", features = [
+#   "cw-storage",
+#   "openapi",
+# ] }
+# layer-climb-config = {path = "../climb/packages/layer-climb-config"}
+# layer-climb-cli = {path = "../climb/packages/layer-climb-cli"}
+# layer-climb-proto = {path = "../climb/packages/layer-climb-proto"}
 
 # CosmWasm
 cosmwasm-schema = "3.0.2"
