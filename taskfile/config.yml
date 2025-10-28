@@ -3,6 +3,8 @@ version: "3"
 vars:
   ALL_COMPONENTS: ["operator", "aggregator"]
   ALL_CONTRACTS: ["payments"]
+  COMPONENT_WITS_OPERATOR: ["wavs:operator@2.0.0"]
+  COMPONENT_WITS_AGGREGATOR: ["wavs:aggregator@2.0.0"]
 
   REPO_ROOT:
     # find the root directory of the repository by looking for the `.git` directory.

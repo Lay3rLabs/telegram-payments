@@ -12,6 +12,8 @@ tasks:
         cmd: task contracts:clean CONTRACT={{.ITEM}}
       - echo "Cleaning artifacts directory"
       - |
+        rm -rf "{{.CONTRACTS_ARTIFACTS_PATH}}"
+      - |
         {{.DOCKER_SUDO}} rm -rf "./artifacts" || true
 
   clean:
@@ -19,7 +21,7 @@ tasks:
       vars: [CONTRACT]
     vars:
       CONTRACT_SRC_NAME:
-        sh: task contracts:src-name CONTRACT_KIND={{.CONTRACT}}
+        sh: task contracts:src-name CONTRACT={{.CONTRACT}}
     cmds:
       - echo "Cleaning {{.CONTRACT}} contracts"
       - rm -rf "{{.CONTRACTS_ARTIFACTS_PATH}}/{{.CONTRACT_PREFIX}}_{{.CONTRACT}}_*"
@@ -34,7 +36,7 @@ tasks:
       vars: [CONTRACT]
     vars:
       CONTRACT_SRC_NAME:
-        sh: task contracts:src-name CONTRACT_KIND={{.CONTRACT}}
+        sh: task contracts:src-name CONTRACT={{.CONTRACT}}
       CONTRACT_PATH: "packages/contracts/{{.CONTRACT}}"
       CONTRACT_FILE: "{{.CONTRACT_SRC_NAME}}.wasm"
     cmds:

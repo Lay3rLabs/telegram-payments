@@ -5,21 +5,53 @@
 1. The usual stuff (Rust, Docker, NPM, etc.)
 2. [Taskfile](https://taskfile.dev/installation)
 3. [Install watchexec](https://github.com/watchexec/watchexec?tab=readme-ov-file#install)
-3. Copy `.example.env` to `.env` and replace the values
+4. [Install and configur wkg to pull from wa.dev](https://crates.io/crates/wkg)
+5. Copy `.example.env` to `.env` and replace the values
+6. Make sure you have `wasm32-wasip2` target installed: `rustup target add wasm32-wasip2`
+
+```bash
 
 ## Building
 
-#### Contracts
+### Contracts
 
 ```bash
 task contracts:build-all
 ```
 
-#### Components
+Or build a specific contract
 
-_STATUS: TODO_
+```bash
+task contracts:build CONTRACT=payments
+```
+
+
+### Components
+
+#### First, fetch the wit definitions
+
+This is only needed once, or when the component wits are updated
+
+```bash
+task components:fetch-wit-all
+```
+
+Or fetch the wit for a specific component
+
+```bash
+task components:fetch-wit COMPONENT=operator
+```
+
+#### Build the components
+
 ```bash
 task components:build-all
+```
+
+Or build a specific component
+
+```bash
+task components:build COMPONENT=operator
 ```
 
 ## Backend
