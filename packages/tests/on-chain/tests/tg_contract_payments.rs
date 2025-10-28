@@ -115,8 +115,10 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap();
 
-    for event in CosmosTxEvents::from(&tx_resp).filter_events_by_attr_key("message", "action") {
-        println!("Event: {:#?}", event);
+    for event in
+        CosmosTxEvents::from(&tx_resp).filter_events_by_type("cosmos.authz.v1beta1.EventGrant")
+    {
+        println!("{:#?}", event);
     }
 
     // Query alice bidirectional mapping is now set
