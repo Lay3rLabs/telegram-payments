@@ -17,6 +17,11 @@ tasks:
     cmds:
       - task --list-all
 
+  clean:
+    desc: "Clean all artifacts"
+    cmds:
+      - rm -rf "{{.ARTIFCACTS_PATH}}"
+
   lint:
     desc: "Run code formatting and linting checks"
     cmds:

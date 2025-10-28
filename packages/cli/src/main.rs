@@ -48,8 +48,6 @@ async fn main() {
                     addr
                 );
                 exit(1);
-            } else {
-                println!("{} balance: {}", addr, balance);
             }
         }
         CliCommand::UploadContract { kind, args } => {
@@ -194,6 +192,7 @@ async fn main() {
             contract_payments_instantiation_file,
             component_operator_cid_file,
             component_aggregator_cid_file,
+            cron_schedule,
             middleware_instantiation_file,
             aggregator_url,
         } => {
@@ -232,21 +231,24 @@ async fn main() {
 
             #[derive(Debug, Deserialize)]
             struct MiddlewareInstantiation {
-                pub address: String,
+                #[serde(rename = "registry_address")]
+                pub _registry_address: String,
+                pub service_manager_address: String,
             }
 
             let middleware_instantiation: MiddlewareInstantiation =
                 read_and_decode(middleware_instantiation_file).await;
 
             let trigger = Trigger::Cron {
-                schedule: "*/5 * * * *".to_string(), // every 5 minutes
+                schedule: cron_schedule,
                 start_time: None,
                 end_time: None,
             };
 
             let operator_component = wavs_types::Component {
                 source: ComponentSource::Download {
-                    uri: component_operator.uri.parse().unwrap(),
+                    //uri: component_operator.uri.parse().unwrap(),
+                    uri: component_operator.gateway_url.parse().unwrap(),
                     digest: component_operator.digest,
                 },
                 permissions: wavs_types::Permissions {
@@ -261,7 +263,8 @@ async fn main() {
 
             let aggregator_component = wavs_types::Component {
                 source: ComponentSource::Download {
-                    uri: component_aggregator.uri.parse().unwrap(),
+                    //uri: component_aggregator.uri.parse().unwrap(),
+                    uri: component_aggregator.gateway_url.parse().unwrap(),
                     digest: component_aggregator.digest,
                 },
                 permissions: wavs_types::Permissions {
@@ -302,7 +305,10 @@ async fn main() {
                 status: wavs_types::ServiceStatus::Active,
                 manager: ServiceManager::Cosmos {
                     chain: args.chain.clone(),
-                    address: middleware_instantiation.address.parse().unwrap(),
+                    address: middleware_instantiation
+                        .service_manager_address
+                        .parse()
+                        .unwrap(),
                 },
             };
 
@@ -312,7 +318,7 @@ async fn main() {
 
             let resp = IpfsFile::upload(
                 bytes,
-                &format!("service.json"),
+                "service.json",
                 ipfs_api_url.as_ref(),
                 ipfs_gateway_url.as_ref(),
                 true,
@@ -332,12 +338,56 @@ async fn main() {
                     digest,
                     cid,
                     uri: uri.clone(),
-                    gateway_url,
+                    gateway_url: gateway_url.clone(),
                 })
                 .await
                 .unwrap();
 
-            println!("\nService URI: {}\n", uri);
+            println!("\nService URI: {}", uri);
+            println!("Service Gateway URL: {}\n", gateway_url);
+        }
+        CliCommand::AggregatorRegisterService {
+            args,
+            service_manager_address,
+            aggregator_url,
+        } => {
+            let req = wavs_types::aggregator::RegisterServiceRequest {
+                service_manager: ServiceManager::Cosmos {
+                    chain: args.chain,
+                    address: service_manager_address.parse().unwrap(),
+                },
+            };
+
+            reqwest::Client::new()
+                .post(aggregator_url.join("services").unwrap())
+                .json(&req)
+                .send()
+                .await
+                .unwrap()
+                .error_for_status()
+                .unwrap();
+        }
+
+        CliCommand::OperatorAddService {
+            args,
+            service_manager_address,
+            wavs_url,
+        } => {
+            let req = wavs_types::AddServiceRequest {
+                service_manager: ServiceManager::Cosmos {
+                    chain: args.chain,
+                    address: service_manager_address.parse().unwrap(),
+                },
+            };
+
+            reqwest::Client::new()
+                .post(wavs_url.join("services").unwrap())
+                .json(&req)
+                .send()
+                .await
+                .unwrap()
+                .error_for_status()
+                .unwrap();
         }
     }
 }

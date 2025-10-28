@@ -4,9 +4,23 @@ See [GettingStarted.md](./GettingStarted.md) for initial setup instructions.
 
 This document assumes you have already:
 
-1. Built everything with `task contracts:build-all` and `task components:build-all`
-2. Started the backend with `task backend:start-all`
-3. Funded the wallet (you can do that with `task deploy:tap-faucet`)
+1. Built everything:
+
+```bash
+task contracts:build-all && task components:build-all
+```
+
+2. Started the backend
+
+```bash
+task backend:start-all
+```
+
+3. Funded the wallets
+
+```bash
+task deploy:tap-faucet-all
+```
 
 
 Ultimately, deploying consists of the following steps:
@@ -17,10 +31,17 @@ Ultimately, deploying consists of the following steps:
 4. Instantiate our contracts to get addresses
 5. Upload components to get IPFS CIDs
 6. Upload services to get IPFS CIDs
-7. Add the service manager address to aggregator node
-8. Add the service manager address to wavs nodes
+7. Set the service URI on the service manager contract
+8. Add the service manager address to aggregator node
+9. Add the service manager address to wavs nodes
 
-Let's go!
+You can do all of these steps in one shot like so:
+
+```bash
+task deploy:all
+```
+
+Or you can do them one by one as described below.
 
 ## Deploying middleware service manager
 
@@ -109,3 +130,29 @@ task deploy:service-upload \
 This will upload the service and write the cid in a JSON file under `builds/deployments/service-cid.json`
 
 The full service JSON is also written to that file under the `service` key
+
+## Set the service URI on the service manager contract
+
+The service manager address is obtained from either the middleware instantiation step or by looking at the service.json itself
+
+```bash
+task deploy:middleware-set-service-uri ADDR=<service-manager-address> URI=<service-uri>
+```
+
+## Register the service on the aggregator
+
+The service manager address is obtained from either the middleware instantiation step or by looking at the service.json itself
+
+```bash
+task deploy:aggregator-register-service ADDR=<service-manager-address>
+```
+
+## Add the service to the operator
+
+The service manager address is obtained from either the middleware instantiation step or by looking at the service.json itself
+
+```bash
+# alternatively, if you have several operators
+# task deploy:operator-add-service ADDR=<service-manager-address> OPERATORS=3
+task deploy:operator-add-service ADDR=<service-manager-address>
+```
