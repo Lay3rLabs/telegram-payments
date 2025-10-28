@@ -53,7 +53,7 @@ async fn fund_account_and_send_workflow() {
     let tg_bob = "@bob";
     let bob_addr = app_client.rand_addr().await; // Bob just needs to watch
 
-    println!("Alice: {}", &alice_addr);
+    println!("Alice: {}", &alice_signer.addr);
     println!("Bob: {}", &bob_addr);
 
     // Give some tokens to Alice
@@ -82,7 +82,8 @@ async fn fund_account_and_send_workflow() {
     .await;
 
     // WAVS Admin registers Bob to receive payments
-    payments.executor
+    payments
+        .executor
         .register_receive(tg_bob.to_string(), bob_addr.clone())
         .await
         .unwrap();
@@ -93,11 +94,7 @@ async fn fund_account_and_send_workflow() {
     let (msg1, msg2) =
         build_registration_messages(&alice_signer, tg_alice, &payments.querier.addr, grant).await;
 
-    app_client
-        .pool()
-        .get()
-        .await
-        .unwrap()
+    alice_signer
         .tx_builder()
         .broadcast([
             proto_into_any(&msg1).unwrap(),
@@ -118,7 +115,7 @@ async fn fund_account_and_send_workflow() {
     assert_eq!(
         payments
             .querier
-            .tg_handle_by_addr(alice_addr.to_string())
+            .tg_handle_by_addr(alice_signer.addr.to_string())
             .await
             .unwrap(),
         Some(tg_alice.to_string())
