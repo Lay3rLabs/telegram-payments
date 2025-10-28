@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint256};
+use cosmwasm_std::Uint256;
 use wavs_types::contracts::cosmwasm::service_handler::{
     ServiceHandlerExecuteMessages, ServiceHandlerQueryMessages,
 };
@@ -27,7 +27,7 @@ pub enum QueryMsg {
     TgByAddr { account: String },
     #[returns(AdminResponse)]
     Admin {},
-    #[returns(Vec<Coin>)]
+    #[returns(Vec<cosmwasm_std::Coin>)]
     PendingPayments { handle: String },
     #[returns(Vec<String>)]
     AllowedDenoms {},

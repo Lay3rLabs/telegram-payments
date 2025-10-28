@@ -9,10 +9,12 @@ use cw_multi_test::{App, Executor};
 #[cfg(feature = "multitest")]
 use std::{cell::RefCell, rc::Rc};
 
-use cosmwasm_std::Addr;
+use anyhow::{anyhow, Result};
 use layer_climb::prelude::*;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
+
+use crate::addr::AnyAddr;
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -50,34 +52,22 @@ impl AnyQuerier {
         MSG: Serialize + Debug,
     >(
         &self,
-        address: &Addr,
+        address: &AnyAddr,
         msg: &MSG,
-    ) -> Result<RESP, cosmwasm_std::StdError> {
+    ) -> Result<RESP> {
         match self {
-            Self::Climb(client) => {
-                let addr = layer_climb::prelude::Address::try_from(address)
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
-                client
-                    .contract_smart(&addr, msg)
-                    .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
-            }
+            Self::Climb(client) => client.contract_smart(&address.into(), msg).await,
             #[cfg(feature = "on-chain")]
             Self::ClimbPool(pool) => {
-                let addr = layer_climb::prelude::Address::try_from(address)
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
-                let client = pool
-                    .get()
-                    .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
-                client
-                    .querier
-                    .contract_smart(&addr, msg)
-                    .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
+                let client = pool.get().await.map_err(|e| anyhow!("{e:?}"))?;
+                client.querier.contract_smart(&address.into(), msg).await
             }
             #[cfg(feature = "multitest")]
-            Self::MultiTest(app) => app.borrow().wrap().query_wasm_smart(address, msg),
+            Self::MultiTest(app) => Ok(app
+                .borrow()
+                .wrap()
+                .query_wasm_smart(address.to_string(), msg)
+                .map_err(|e| anyhow!("{e:?}"))?),
         }
     }
 }
@@ -91,7 +81,7 @@ pub enum AnyExecutor {
     #[cfg(feature = "multitest")]
     MultiTest {
         app: Rc<RefCell<App>>,
-        admin: Addr,
+        admin: cosmwasm_std::Addr,
     },
 }
 
@@ -109,8 +99,8 @@ impl From<layer_climb::pool::SigningClientPool> for AnyExecutor {
 }
 
 #[cfg(feature = "multitest")]
-impl From<(Rc<RefCell<App>>, Addr)> for AnyExecutor {
-    fn from((app, admin): (Rc<RefCell<App>>, Addr)) -> AnyExecutor {
+impl From<(Rc<RefCell<App>>, cosmwasm_std::Addr)> for AnyExecutor {
+    fn from((app, admin): (Rc<RefCell<App>>, cosmwasm_std::Addr)) -> AnyExecutor {
         AnyExecutor::MultiTest { app, admin }
     }
 }
@@ -118,14 +108,12 @@ impl From<(Rc<RefCell<App>>, Addr)> for AnyExecutor {
 impl AnyExecutor {
     pub async fn contract_exec<MSG: Serialize + std::fmt::Debug>(
         &self,
-        address: &Addr,
+        address: &AnyAddr,
         msg: &MSG,
         funds: &[cosmwasm_std::Coin],
-    ) -> Result<AnyTxResponse, cosmwasm_std::StdError> {
+    ) -> Result<AnyTxResponse> {
         match self {
             Self::Climb(client) => {
-                let addr = Address::try_from(address)
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
                 let funds = funds
                     .iter()
                     .map(|c| layer_climb::prelude::Coin {
@@ -135,19 +123,13 @@ impl AnyExecutor {
                     .collect::<Vec<_>>();
 
                 client
-                    .contract_execute(&addr, msg, funds, None)
+                    .contract_execute(&address.into(), msg, funds, None)
                     .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
                     .map(AnyTxResponse::Climb)
             }
             #[cfg(feature = "on-chain")]
             Self::ClimbPool(pool) => {
-                let client = pool
-                    .get()
-                    .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
-                let addr = Address::try_from(address)
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))?;
+                let client = pool.get().await.map_err(|e| anyhow!("{e:?}"))?;
                 let funds = funds
                     .iter()
                     .map(|c| layer_climb::prelude::Coin {
@@ -157,16 +139,16 @@ impl AnyExecutor {
                     .collect::<Vec<_>>();
 
                 client
-                    .contract_execute(&addr, msg, funds, None)
+                    .contract_execute(&address.into(), msg, funds, None)
                     .await
-                    .map_err(|e| cosmwasm_std::StdError::msg(e.to_string()))
                     .map(AnyTxResponse::Climb)
             }
             #[cfg(feature = "multitest")]
-            Self::MultiTest { app, admin } => app
+            Self::MultiTest { app, admin } => Ok(app
                 .borrow_mut()
-                .execute_contract(admin.clone(), address.clone(), msg, funds)
-                .map(AnyTxResponse::MultiTest),
+                .execute_contract(admin.clone(), address.into(), msg, funds)
+                .map(AnyTxResponse::MultiTest)
+                .map_err(|e| anyhow!("{e:?}"))?),
         }
     }
 }

@@ -11,10 +11,12 @@ static NEUTRON_FAUCET_CLIENT: tokio::sync::OnceCell<SigningClient> =
 
 const TAP_AMOUNT: u128 = 1_000_000_000;
 
-pub async fn tap(addr: &Address, denom: Option<&str>) -> Result<()> {
+pub async fn tap(addr: &Address, amount: Option<u128>, denom: Option<&str>) -> Result<()> {
     let signer = NEUTRON_FAUCET_CLIENT.get_or_init(create_client).await;
 
-    signer.transfer(TAP_AMOUNT, addr, denom, None).await?;
+    signer
+        .transfer(amount.unwrap_or(TAP_AMOUNT), addr, denom, None)
+        .await?;
 
     Ok(())
 

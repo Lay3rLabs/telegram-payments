@@ -34,8 +34,12 @@ pub enum CliCommand {
         args: CliArgs,
     },
     FaucetTap {
-        // if not supplied, will be the one in CLI_MNEMONIC
+        /// if not supplied, will be the one in CLI_MNEMONIC
         addr: Option<String>,
+        /// if not supplied, will be the default
+        amount: Option<u128>,
+        /// if not supplied, will be the default
+        denom: Option<String>,
         #[clap(flatten)]
         args: CliArgs,
     },
@@ -104,7 +108,7 @@ impl ContractKind {
             .unwrap()
             .join("builds")
             .join("contracts")
-            .join(&format!("tg_contract_{}.wasm", self.as_str()));
+            .join(format!("tg_contract_{}.wasm", self.as_str()));
 
         tokio::fs::read(&path)
             .await
