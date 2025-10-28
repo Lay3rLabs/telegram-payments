@@ -1,4 +1,9 @@
+use cosmwasm_std::Addr;
+use layer_climb_proto::{
+    authz::MsgGrant, bank::SendAuthorization, wasm::MsgExecuteContract, Coin as ProtoCoin,
+};
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
+use tg_contract_api::payments::msg::ExecuteMsg;
 use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
 use tg_utils::tracing::tracing_init;
 
@@ -76,7 +81,11 @@ async fn fund_account_and_send_workflow() {
     )
     .await;
 
-    // TODO: Alice registers to send funds and gives grant message in one tx
+    // Alice registers to send funds and gives grant message in one tx
+    let grant = cosmwasm_std::coin(2_000_000_000u128, "untrn");
+    let (msg1, msg2) =
+        build_registration_messages(tg_alice, &alice_addr, &payments.querier.addr, grant);
+    // TODO: Encode these, sign and submit tx
 
     // Query alice reverse mapping is now set
     assert_eq!(
@@ -96,4 +105,38 @@ async fn fund_account_and_send_workflow() {
         .unwrap();
 
     // TODO: Query balances of Alice and Bob updated
+}
+
+/// This builds messages for a user to register and grant permission to send on their behalf.
+/// It must be signed by the users private key and then submitted as a multi-msg tx
+fn build_registration_messages(
+    tg_handle: &str,
+    user_addr: &Addr,
+    contract_addr: &Addr,
+    grant: cosmwasm_std::Coin,
+) -> (MsgExecuteContract, MsgGrant) {
+    let register_msg = ExecuteMsg::RegisterSend {
+        tg_handle: tg_handle.to_string(),
+    };
+    let exec_msg: MsgExecuteContract = MsgExecuteContract {
+        contract: contract_addr.to_string(),
+        sender: user_addr.to_string(),
+        msg: cosmwasm_std::to_json_vec(&register_msg).unwrap(),
+        funds: vec![],
+    };
+
+    // TODO: this import doesn't work, the SendAuthorization type is there, but no authz.MsgGrant in layer-climb-proto
+    let grant_msg = MsgGrant {
+        granter: user_addr.to_string(),
+        grantee: contract_addr.to_string(),
+        grant: SendAuthorization {
+            spend_limit: vec![ProtoCoin {
+                amount: grant.amount.to_string(),
+                denom: grant.denom.clone(),
+            }],
+            allow_list: vec![],
+        },
+    };
+
+    return (exec_msg, grant_msg);
 }
