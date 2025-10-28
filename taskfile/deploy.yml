@@ -26,15 +26,60 @@ tasks:
     cmds:
       - cd packages/cli && cargo run upload-component --kind {{.COMPONENT}} --output-filename={{.FILENAME}} --ipfs-api-url {{.IPFS_API_URL}} --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
 
-  upload-service:
+  middleware-service-manager-upload:
     requires:
-      vars:
-        [
-          TRIGGER_ADDR,
-          SERVICE_HANDLER_ADDR,
-          SERVICE_MANAGER_ADDR,
-          OPERATOR_COMPONENT_URL,
-          AGGREGATOR_COMPONENT_URL,
-        ]
+      vars: [FILENAME]
     cmds:
-      - cd packages/cli && cargo run upload-service
+      - mkdir -p "{{.ARTIFACTS_PATH}}"
+      - >
+        docker run --rm
+        --network host
+        -v "{{.WAVS_HOME_DIR}}":/wavs-home:ro
+        -v "{{.DEPLOYMENTS_ARTIFACTS_PATH}}":/output
+        -e CHAIN_KEY="{{.CHAIN_KEY}}"
+        -e WAVS_HOME="/wavs-home"
+        -e CLI_MNEMONIC="{{.CLI_MNEMONIC}}"
+        {{.WAVS_CW_MIDDLEWARE_DOCKER_IMAGE}}
+        service-manager upload --contract-kind mirror
+        --output-path "/output/{{.FILENAME}}"
+
+  middleware-stake-registry-upload:
+    requires:
+      vars: [FILENAME]
+    cmds:
+      - mkdir -p "{{.ARTIFACTS_PATH}}"
+      - >
+        docker run --rm
+        --network host
+        -v "{{.WAVS_HOME_DIR}}":/wavs-home:ro
+        -v "{{.DEPLOYMENTS_ARTIFACTS_PATH}}":/output
+        -e CHAIN_KEY="{{.CHAIN_KEY}}"
+        -e WAVS_HOME="/wavs-home"
+        -e CLI_MNEMONIC="{{.CLI_MNEMONIC}}"
+        {{.WAVS_CW_MIDDLEWARE_DOCKER_IMAGE}}
+        registry upload --contract-kind mirror_stake
+        --output-path "/output/{{.FILENAME}}"
+
+  middleware-instantiate:
+    requires:
+      vars: [MANAGER_CODE_ID, REGISTRY_CODE_ID, FILENAME]
+    vars:
+      THRESHOLD: 1000
+      STRATEGIES: "test_strategy_1=100 test_strategy_2=200"
+    cmds:
+      - mkdir -p "{{.ARTIFACTS_PATH}}"
+      - >
+        docker run --rm
+        --network host
+        -v "{{.WAVS_HOME_DIR}}":/wavs-home:ro
+        -v "{{.DEPLOYMENTS_ARTIFACTS_PATH}}":/output
+        -e CHAIN_KEY="{{.CHAIN_KEY}}"
+        -e WAVS_HOME="/wavs-home"
+        -e CLI_MNEMONIC="{{.CLI_MNEMONIC}}"
+        {{.WAVS_CW_MIDDLEWARE_DOCKER_IMAGE}}
+        registry instantiate-mirror-stake
+        --code-id {{.REGISTRY_CODE_ID}}
+        --service-manager-code-id {{.MANAGER_CODE_ID}}
+        --threshold-weight {{.THRESHOLD}}
+        --strategy {{.STRATEGIES}}
+        --output-path "/output/{{.FILENAME}}"
