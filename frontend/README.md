@@ -32,6 +32,19 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+### TS Codegen
+
+If you want to update the TS bindings for cosmwasm contract, please run:
+
+```bash
+# in the root directory
+task contracts:all-schemas
+# in this directory
+npm run codegen
+```
+
+The new bindings will be output in `src/contracts`
+
 ### Testing in Telegram
 
 **Quick Start:**

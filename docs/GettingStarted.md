@@ -29,6 +29,8 @@ task backend:stop-all
 
 ### Contracts
 
+To build the contracts (found in `builds/contracts/`):
+
 ```bash
 task contracts:build-all
 ```
@@ -37,6 +39,12 @@ Or build a specific contract
 
 ```bash
 task contracts:build CONTRACT=payments
+```
+
+To generate the schema files from the contracts (found in `builds/schema/`)
+
+```bash
+task contracts:all-schema
 ```
 
 

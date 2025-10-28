@@ -60,6 +60,27 @@ tasks:
         {{.DOCKER_SUDO}} rm -rf "./artifacts/{{.CONTRACT_FILE}}" || true
       - echo "Built contract at {{.CONTRACTS_ARTIFACTS_PATH}}/{{.CONTRACT_FILE}}"
 
+  all-schema:
+    cmds:
+      - for: { var: ALL_CONTRACTS }
+        cmd: task contracts:schema CONTRACT={{.ITEM}}
+
+  schema:
+    requires:
+      vars: [CONTRACT]
+    vars:
+      CONTRACT_SRC_NAME:
+        sh: task contracts:src-name CONTRACT={{.CONTRACT}}
+      CONTRACT_PATH: "packages/contracts/{{.CONTRACT}}"
+      CONTRACT_FILE: "{{.CONTRACT_SRC_NAME}}.wasm"
+    cmds:
+      - echo "Building schema for contract {{.CONTRACT}} at {{.CONTRACT_PATH}}"
+      - mkdir -p "./builds/schema"
+      - rm -rf "./builds/schema/{{.CONTRACT}}"
+      - cd "{{.CONTRACT_PATH}}" && cargo schema && cd -
+      - mv "{{.CONTRACT_PATH}}/schema" "./builds/schema/{{.CONTRACT}}"
+      - echo "Built schema for contract {{.CONTRACT}} at ./builds/schema/{{.CONTRACT}}"
+
   src-name:
     requires:
       vars: [CONTRACT]
