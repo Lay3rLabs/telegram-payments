@@ -49,38 +49,32 @@ async fn fund_account_and_send_workflow() {
 
     // Alice will send
     let tg_alice = "@alice";
-    let alice_addr = app_client.rand_addr().await; // TODO: we need a real key here to sign with
+    let alice = app_client.rand_signing_client().await;
+    let alice_addr = alice.addr.clone();
     let tg_bob = "@bob";
     let bob_addr = app_client.rand_addr().await; // Bob just needs to watch
 
+    println!("Alice: {}", &alice_addr);
+    println!("Bob: {}", &bob_addr);
+
     // Give some tokens to Alice
-    let granter_addr: Address = CosmosAddr::try_from(&alice_addr).unwrap().into();
-    faucet::tap(&granter_addr, None).await.unwrap();
+    faucet::tap(&alice_addr, None).await.unwrap();
 
     // TODO: Query balance of alice (non-zero), bob (zero)
     // let alice_balance = app_client.querier.balance(alice_addr.clone(), None).await.unwrap();
 
     // WAVS Admin registers Alice to receive payments
-    shared_tests::payments::register_recieves_open_account(
-        &payments.querier,
-        &payments.executor,
-        RegisterReceivesOpenAccountProps {
-            tg_handle: tg_alice.to_string(),
-            user_addr: alice_addr.clone(),
-        },
-    )
-    .await;
+    let cw_alice_addr = Addr::unchecked(alice_addr.to_string());
+    payments.executor
+        .register_receive(tg_alice.to_string(), cw_alice_addr.clone())
+        .await
+        .unwrap();
 
     // WAVS Admin registers Bob to receive payments
-    shared_tests::payments::register_recieves_open_account(
-        &payments.querier,
-        &payments.executor,
-        RegisterReceivesOpenAccountProps {
-            tg_handle: tg_bob.to_string(),
-            user_addr: bob_addr.clone(),
-        },
-    )
-    .await;
+    payments.executor
+        .register_receive(tg_bob.to_string(), bob_addr.clone())
+        .await
+        .unwrap();
 
     // Alice registers to send funds and gives grant message in one tx
     let grant = cosmwasm_std::coin(500_000_000u128, "untrn");
@@ -93,11 +87,7 @@ async fn fund_account_and_send_workflow() {
     )
     .await;
 
-    app_client
-        .pool()
-        .get()
-        .await
-        .unwrap()
+    alice
         .tx_builder()
         .broadcast([
             proto_into_any(&msg1).unwrap(),
@@ -106,14 +96,22 @@ async fn fund_account_and_send_workflow() {
         .await
         .unwrap();
 
-    // Query alice reverse mapping is now set
+    // Query alice bidirectional mapping is now set
     assert_eq!(
         payments
             .querier
-            .tg_handle_by_addr(tg_alice.to_string())
+            .addr_by_tg_handle(tg_alice.to_string())
             .await
             .unwrap(),
         Some(alice_addr.to_string())
+    );
+    assert_eq!(
+        payments
+            .querier
+            .tg_handle_by_addr(alice_addr.to_string())
+            .await
+            .unwrap(),
+        Some(tg_alice.to_string())
     );
 
     // WAVS Admin triggers send from alice to bob
@@ -131,7 +129,7 @@ async fn fund_account_and_send_workflow() {
 async fn build_registration_messages(
     app_client: &AppClient,
     tg_handle: &str,
-    user_addr: &Addr,
+    user_addr: &Address,
     contract_addr: &Addr,
     grant_amount: cosmwasm_std::Coin,
 ) -> (
@@ -140,7 +138,6 @@ async fn build_registration_messages(
 ) {
     let signing_client = app_client.pool().get().await.unwrap();
 
-    let user_addr: Address = CosmosAddr::try_from(user_addr).unwrap().into();
     let contract_addr: Address = CosmosAddr::try_from(contract_addr).unwrap().into();
 
     let register_msg = ExecuteMsg::RegisterSend {
@@ -156,7 +153,7 @@ async fn build_registration_messages(
 
     let grant_msg = signing_client
         .authz_grant_send_msg(
-            Some(user_addr),
+            Some(user_addr.clone()),
             contract_addr,
             vec![grant_amount.to_proto_coin()],
             vec![],

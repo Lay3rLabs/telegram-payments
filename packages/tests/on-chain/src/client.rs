@@ -71,6 +71,10 @@ impl AppClient {
         let signer = KeySigner::new_mnemonic_str(&mnemonic, None)
             .expect("Failed to create KeySigner from mnemonic");
 
+        // This needs funding first, otherwise you cannot query sequence and account number
+        let signer_addr = signer.address(&self.chain_config).await.unwrap();
+        faucet::tap(&signer_addr, None).await.unwrap();
+
         SigningClient::new(self.chain_config.clone(), signer, None)
             .await
             .unwrap()
