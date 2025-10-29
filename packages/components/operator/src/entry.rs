@@ -1,12 +1,13 @@
 use crate::{
     host::{self, LogLevel},
-    parse::parse_update,
+    parse::{map_command_to_contract, parse_update},
     tg_helpers::get_updates,
     wavs::types::events::TriggerData,
     TriggerAction, WasmResponse,
 };
 use anyhow::Result;
 
+// the WasmResponse payload is Vec<ComponentMsg>
 pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmResponse>> {
     match trigger_action.data {
         TriggerData::Raw(data) => {
@@ -32,6 +33,18 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
                 }
             }
             Ok(None)
+        }
+        TriggerData::Cron(_) => {
+            let commands = get_updates(None, None)?
+                .into_iter()
+                .filter_map(parse_update)
+                .filter_map(|(_, cmd)| map_command_to_contract(cmd))
+                .collect::<Vec<_>>();
+
+            Ok(Some(WasmResponse {
+                payload: serde_json::to_vec(&commands)?,
+                ordering: None,
+            }))
         }
         _ => Ok(None),
     }

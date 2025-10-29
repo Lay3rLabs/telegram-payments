@@ -277,7 +277,9 @@ async fn main() {
                 fuel_limit: None,
                 time_limit_seconds: None,
                 config: Default::default(),
-                env_keys: Default::default(),
+                env_keys: ["WAVS_ENV_OPERATOR_TELEGRAM_BOT_TOKEN".to_string()]
+                    .into_iter()
+                    .collect(),
             };
 
             let aggregator_component = wavs_types::Component {
