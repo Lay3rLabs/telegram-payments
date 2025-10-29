@@ -23,9 +23,7 @@ pub enum TelegramWavsCommand {
         user_id: i64,
         user_name: Option<String>,
     },
-    GroupId {
-        group_id: i64,
-    },
+    Status,
 }
 
 impl TryFrom<&TelegramMessage> for TelegramBotCommand {
@@ -39,9 +37,12 @@ impl TryFrom<&TelegramMessage> for TelegramBotCommand {
                 if parts.len() > 0 {
                     tracing::info!("PARTS: {:?}", parts);
                     match message.chat.chat_type {
-                        TelegramChatType::Private => match parts[..] {
+                        TelegramChatType::Private | TelegramChatType::Group => match parts[..] {
                             ["/start"] => Ok(TelegramBotCommand::Start),
                             ["/help"] => Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Help)),
+                            ["/status"] => {
+                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Status))
+                            }
                             ["/send", handle, amount] => {
                                 Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Send {
                                     user_id: message.from.id,
@@ -67,19 +68,9 @@ impl TryFrom<&TelegramMessage> for TelegramBotCommand {
                             }
                             _ => Err(TelegramBotError::BadCommand(text)),
                         },
-                        TelegramChatType::Group
-                        | TelegramChatType::SuperGroup
-                        | TelegramChatType::Channel => match parts[..] {
-                            ["/groupId"] => match message.chat.id {
-                                id if id < 0 => {
-                                    Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::GroupId {
-                                        group_id: id,
-                                    }))
-                                }
-                                _ => Err(TelegramBotError::InvalidGroupId),
-                            },
-                            _ => Err(TelegramBotError::BadCommand(text)),
-                        },
+                        TelegramChatType::SuperGroup | TelegramChatType::Channel => {
+                            Err(TelegramBotError::BadCommand(text))
+                        }
                     }
                 } else {
                     Err(TelegramBotError::UnknownCommand(text))

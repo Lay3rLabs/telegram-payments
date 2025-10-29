@@ -1,10 +1,9 @@
 mod args;
 mod error;
-mod handlers;
-mod state;
 
 use tg_utils::telegram::{
-    api::TelegramUpdate,
+    api::{TelegramBotCommand, TelegramMessage},
+    error::TgResult,
     messenger::{any_client::TelegramMessengerExt, reqwest_client::TelegramMessenger},
 };
 use tg_utils::tracing::tracing_init;
@@ -33,8 +32,20 @@ async fn main() -> anyhow::Result<()> {
             Ok(updates) => {
                 println!("Got {} updates", updates.len());
                 for update in updates {
-                    println!("Update: {:#?}", update);
                     offset = Some(update.update_id + 1);
+                    if let Some(msg) = update.message {
+                        let chat = msg.chat.id;
+                        match TelegramBotCommand::try_from(&msg) {
+                            Ok(command) => {
+                                handle_command(&messenger, chat, command).await?;
+                            }
+                            Err(e) => {
+                                messenger
+                                    .send_message(chat, &format!("Error handling command: {}", e))
+                                    .await?;
+                            }
+                        }
+                    }
                 }
             }
             Err(e) => {
@@ -42,4 +53,35 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+}
+
+async fn handle_command(
+    messenger: &TelegramMessenger,
+    chat_id: i64,
+    command: TelegramBotCommand,
+) -> TgResult<TelegramMessage> {
+    let msg = match command.clone() {
+        TelegramBotCommand::Start => "Welcome to the bot! send /help for help!".to_string(),
+        TelegramBotCommand::Wavs(wavs_command) => match wavs_command {
+            tg_utils::telegram::api::TelegramWavsCommand::Receive { address, .. } => {
+                format!("okay, you got it, registered {address}")
+            }
+            tg_utils::telegram::api::TelegramWavsCommand::Send { handle, amount, .. } => {
+                format!("okay, you got it, sending {amount} to {handle}")
+            }
+            tg_utils::telegram::api::TelegramWavsCommand::Help {} => {
+                r#"*Available commands:*
+                    `/start` - Start interaction with the bot
+                    `/help` - Show this help message
+                    `/status` - Check if your account has been registered for receiving or sending payments
+                    `/receive <address>` - Register to receive WAVS payments at the specified address
+                    `/send <handle> <amount>` - Register to send WAVS payments to the specified handle
+                    "#.to_string()
+            }
+            tg_utils::telegram::api::TelegramWavsCommand::Status {} => {
+                "Checking your current status, please be patient...".to_string()
+            }
+        },
+    };
+    messenger.send_message(chat_id, &msg).await
 }
