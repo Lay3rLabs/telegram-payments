@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use layer_climb::prelude::*;
-use tg_utils::{config::load_chain_configs_from_wavs, path::repo_root};
+use tg_utils::{
+    config::load_chain_configs_from_wavs, path::repo_root, telegram::messenger::TelegramMessenger,
+};
 
 use crate::command::{CliArgs, CliCommand};
 
@@ -30,6 +32,8 @@ impl CliContext {
             CliCommand::AssertAccountExists { args, .. } => args,
             CliCommand::AggregatorRegisterService { args, .. } => args,
             CliCommand::OperatorAddService { args, .. } => args,
+            CliCommand::TelegramSetWebhook { args, .. } => args,
+            CliCommand::TelegramGetWebhook { args, .. } => args,
         }
     }
 
@@ -98,5 +102,14 @@ impl CliContext {
             .await?
             .address_from_pub_key(&signer.public_key().await?)?;
         Ok(address)
+    }
+
+    pub fn tg_messenger(&self) -> TelegramMessenger<reqwest::Client> {
+        let bot_token = std::env::var("SERVER_TELEGRAM_BOT_TOKEN").unwrap_or_default();
+        if bot_token.is_empty() {
+            panic!("SERVER_TELEGRAM_BOT_TOKEN is not set");
+        }
+        let http_client = reqwest::Client::new();
+        TelegramMessenger::new(bot_token, http_client)
     }
 }

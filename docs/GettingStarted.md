@@ -5,9 +5,10 @@
 1. The usual stuff (Rust, Docker, NPM, etc.)
 2. [Taskfile](https://taskfile.dev/installation)
 3. [Install watchexec](https://github.com/watchexec/watchexec?tab=readme-ov-file#install)
-4. [Install and configur wkg to pull from wa.dev](https://crates.io/crates/wkg)
+4. [Install and configure wkg to pull from wa.dev](https://crates.io/crates/wkg)
 5. Copy `.example.env` to `.env` and replace the values
 6. Make sure you have `wasm32-wasip2` target installed: `rustup target add wasm32-wasip2`
+7. (optional) setup [ngrok](http://ngrok.com) for local server dev and change the url in [config.yml](../taskfile/config.yml)
 
 ## TL;DR
 
@@ -18,11 +19,18 @@ Start all backend services
 task backend:start-all
 ```
 
+```bash
 _... do stuff ..._
 
 Stop all backend services
 ```bash
 task backend:stop-all
+```
+
+As a helper for local server dev, if you have ngrok set up, you can run run this and get a public url to use for webhooks (it will take up its own terminal, however)
+
+```bash
+task backend:ngrok-start
 ```
 
 ## Building

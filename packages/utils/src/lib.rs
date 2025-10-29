@@ -4,9 +4,11 @@ pub mod addr;
 pub mod client;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "binary")] {
+    if #[cfg(feature = "full")] {
         mod binary;
         pub use binary::*;
     }
 }
+#[cfg(feature = "telegram")]
+pub mod telegram;
 pub mod tracing;

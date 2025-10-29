@@ -1,0 +1,18 @@
+version: "3"
+
+tasks:
+  set-webhook:
+    requires:
+      vars: [SERVER_TELEGRAM_WEBHOOK_SECRET]
+    vars:
+      LOCALHOST: "http://127.0.0.1:{{.SERVER_PORT}}"
+      DEFAULT_WEBHOOK: "{{.NGROK_URL | default .LOCALHOST}}/telegram-webhook"
+      WEBHOOK: "{{.WEBHOOK | default .DEFAULT_WEBHOOK}}"
+    cmds:
+      - echo "Setting webhook..."
+      - cd packages/cli && cargo run telegram-set-webhook --webhook "{{.WEBHOOK}}" --webhook-secret "{{.SERVER_TELEGRAM_WEBHOOK_SECRET}}"
+
+  get-webhook:
+    cmds:
+      - echo "Getting webhook info..."
+      - cd packages/cli && cargo run telegram-get-webhook
