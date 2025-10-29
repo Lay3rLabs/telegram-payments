@@ -20,7 +20,7 @@ use crate::addr::AnyAddr;
 #[allow(clippy::large_enum_variant)]
 pub enum AnyQuerier {
     Climb(QueryClient),
-    #[cfg(feature = "on-chain")]
+    #[cfg(feature = "client-pool")]
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
     MultiTest(Rc<RefCell<App>>),
@@ -32,7 +32,7 @@ impl From<QueryClient> for AnyQuerier {
     }
 }
 
-#[cfg(feature = "on-chain")]
+#[cfg(feature = "client-pool")]
 impl From<layer_climb::pool::SigningClientPool> for AnyQuerier {
     fn from(pool: layer_climb::pool::SigningClientPool) -> AnyQuerier {
         AnyQuerier::ClimbPool(pool)
@@ -57,7 +57,7 @@ impl AnyQuerier {
     ) -> Result<RESP> {
         match self {
             Self::Climb(client) => client.contract_smart(&address.into(), msg).await,
-            #[cfg(feature = "on-chain")]
+            #[cfg(feature = "client-pool")]
             Self::ClimbPool(pool) => {
                 let client = pool.get().await.map_err(|e| anyhow!("{e:?}"))?;
                 client.querier.contract_smart(&address.into(), msg).await
@@ -76,7 +76,7 @@ impl AnyQuerier {
 #[allow(clippy::large_enum_variant)]
 pub enum AnyExecutor {
     Climb(SigningClient),
-    #[cfg(feature = "on-chain")]
+    #[cfg(feature = "client-pool")]
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
     MultiTest {
@@ -91,7 +91,7 @@ impl From<SigningClient> for AnyExecutor {
     }
 }
 
-#[cfg(feature = "on-chain")]
+#[cfg(feature = "client-pool")]
 impl From<layer_climb::pool::SigningClientPool> for AnyExecutor {
     fn from(pool: layer_climb::pool::SigningClientPool) -> AnyExecutor {
         AnyExecutor::ClimbPool(pool)
@@ -127,7 +127,7 @@ impl AnyExecutor {
                     .await
                     .map(AnyTxResponse::Climb)
             }
-            #[cfg(feature = "on-chain")]
+            #[cfg(feature = "client-pool")]
             Self::ClimbPool(pool) => {
                 let client = pool.get().await.map_err(|e| anyhow!("{e:?}"))?;
                 let funds = funds

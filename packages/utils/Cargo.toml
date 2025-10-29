@@ -13,8 +13,10 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
+client = []
+binary = ["multitest", "client-pool", "client", "dep:tokio", "dep:toml", "dep:reqwest"]
 multitest = ["dep:cw-multi-test"]
-on-chain = ["dep:deadpool", "dep:tokio", "dep:reqwest", "dep:toml"]
+client-pool = ["dep:deadpool"]
 
 [dependencies]
 tg-contract-api = { workspace = true}

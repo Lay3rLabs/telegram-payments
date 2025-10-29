@@ -9,8 +9,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
-tg-test-common = { workspace = true, features = ["on-chain"] }
-tg-utils = { workspace = true, features = ["on-chain"] }
+tg-test-common = { workspace = true}
+tg-utils = { workspace = true, features = ["binary"] }
 tg-contract-payments = { workspace = true}
 tg-contract-api= { workspace = true}
 wavs-types = { workspace = true }

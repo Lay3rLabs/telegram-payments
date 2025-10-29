@@ -7,3 +7,21 @@ rust-version.workspace = true
 repository.workspace = true
 license.workspace = true
 publish = false
+
+[dependencies]
+tg-test-common = { workspace = true}
+tg-utils = { workspace = true, features = ["binary"] }
+tg-contract-payments = { workspace = true}
+tg-contract-api= { workspace = true}
+wavs-types = { workspace = true }
+cosmwasm-std = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true }
+deadpool = { workspace = true }
+layer-climb = { workspace = true }
+bip39 = { workspace = true }
+rand = { workspace = true }
+layer-climb-proto = { workspace = true }
