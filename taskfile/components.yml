@@ -122,7 +122,9 @@ tasks:
   ######################## EXEC #####################################
   ###################################################################
 
-  exec-operator-read-messages:
+  exec-operator-read-*:
+    vars:
+      READ_KIND: "{{index .MATCH 0}}"
     cmds:
       - >
         docker run --rm
@@ -136,4 +138,4 @@ tasks:
         wavs-cli exec
         --log-level '{{.RUST_LOG | default "info"}}'
         --component /components/{{.COMPONENT_PREFIX}}_operator.wasm
-        --input "read-messages"
+        --input "read-{{.READ_KIND}}"

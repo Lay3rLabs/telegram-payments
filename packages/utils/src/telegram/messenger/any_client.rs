@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::telegram::{
-    api::{TelegramMessage, TelegramUser, TelegramWebHookInfo},
+    api::{TelegramMessage, TelegramUpdate, TelegramUser, TelegramWebHookInfo},
     error::{TelegramBotError, TgResult},
 };
 
@@ -42,6 +42,40 @@ pub trait TelegramMessengerExt {
 
     async fn get_webhook(&self) -> TgResult<TelegramWebHookInfo> {
         self.make_request_empty("getWebhookInfo").await
+    }
+
+    async fn get_updates(
+        &self,
+        offset: Option<i64>,
+        limit: Option<u32>,
+        timeout: Option<u32>,
+        allowed_updates: Option<Vec<String>>,
+    ) -> TgResult<Vec<TelegramUpdate>> {
+        let mut params = HashMap::new();
+
+        if let Some(offset) = offset {
+            params.insert("offset".to_string(), offset.to_string());
+        }
+
+        if let Some(limit) = limit {
+            params.insert("limit".to_string(), limit.to_string());
+        }
+
+        if let Some(timeout) = timeout {
+            params.insert("timeout".to_string(), timeout.to_string());
+        }
+
+        if let Some(allowed_updates) = allowed_updates {
+            let json = serde_json::to_string(&allowed_updates)
+                .map_err(|e| TelegramBotError::Internal(e.to_string()))?;
+            params.insert("allowed_updates".to_string(), json);
+        }
+
+        if params.is_empty() {
+            self.make_request_empty("getUpdates").await
+        } else {
+            self.make_request_params("getUpdates", params).await
+        }
     }
 
     async fn send_message(&self, chat_id: i64, text: &str) -> TgResult<TelegramMessage> {

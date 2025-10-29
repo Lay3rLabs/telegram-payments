@@ -4,6 +4,13 @@ We have two bots in this system:
 
 Create a new bot via https://t.me/BotFather
 
+NOTE: You must turn group privacy off for the bot via BotFather:
+
+```
+/mybots -> choose your bot -> Bot Settings -> Group Privacy -> Turn off
+```
+
+
 Go through the normal setup and make sure you set the received API key in your environment as:
 
 ```bash

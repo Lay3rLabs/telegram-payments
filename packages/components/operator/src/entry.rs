@@ -1,6 +1,7 @@
 use crate::{
     host::{self, LogLevel},
-    tg_helpers::read_messages,
+    parse::parse_update,
+    tg_helpers::get_updates,
     wavs::types::events::TriggerData,
     TriggerAction, WasmResponse,
 };
@@ -11,14 +12,23 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
         TriggerData::Raw(data) => {
             let data = str::from_utf8(&data)?;
             match data {
-                "read-messages" => {
-                    let messages = read_messages()?;
-                    for message in messages {
-                        host::log(LogLevel::Info, &format!("Message: {}", message,));
+                "read-updates" => {
+                    let updates = get_updates(Some(20i64), None)?;
+                    for update in updates {
+                        host::log(LogLevel::Info, &format!("Update: {:?}", update));
+                    }
+                }
+                "read-commands" => {
+                    let commands = get_updates(None, None)?
+                        .into_iter()
+                        .filter_map(parse_update)
+                        .collect::<Vec<_>>();
+                    for command in commands {
+                        host::log(LogLevel::Info, &format!("Command: {:?}", command));
                     }
                 }
                 _ => {
-                    host::log(LogLevel::Warn, &format!("Unknown command: {data}",));
+                    return Err(anyhow::anyhow!("Unknown command: {data}"));
                 }
             }
             Ok(None)
