@@ -19,8 +19,18 @@ pub enum Auth {
 }
 
 #[cw_serde]
+#[schemaifier(mute_warnings)]
 #[derive(QueryResponses)]
+#[query_responses(nested)]
+#[serde(untagged)]
 pub enum QueryMsg {
+    Custom(CustomQueryMsg),
+    Wavs(ServiceHandlerQueryMessages),
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum CustomQueryMsg {
     #[returns(ChainAddrResponse)]
     AddrByTg { handle: String },
     #[returns(TgHandleResponse)]
@@ -31,9 +41,6 @@ pub enum QueryMsg {
     PendingPayments { handle: String },
     #[returns(Vec<String>)]
     AllowedDenoms {},
-    // #[serde(untagged)]
-    #[returns(())]
-    Wavs(ServiceHandlerQueryMessages),
 }
 
 #[cw_serde]
@@ -52,16 +59,21 @@ pub enum ComponentMsg {
 }
 
 #[cw_serde]
+#[schemaifier(mute_warnings)]
+#[serde(untagged)]
 pub enum ExecuteMsg {
+    Custom(CustomExecuteMsg),
+    Wavs(ServiceHandlerExecuteMessages),
+}
+
+#[cw_serde]
+pub enum CustomExecuteMsg {
     /// Must be called by WAVS operators
     RegisterReceive(RegisterReceiveMsg),
     /// Must be called by WAVS operators
     SendPayment(SendPaymentMsg),
     /// Called directly by the blockchain account authorizing payments
     RegisterSend { tg_handle: String },
-    /// The payload is Vec<ComponentMsg>
-    // #[serde(untagged)]
-    Wavs(ServiceHandlerExecuteMessages),
 }
 
 #[cw_serde]

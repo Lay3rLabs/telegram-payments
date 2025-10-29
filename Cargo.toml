@@ -99,7 +99,7 @@ layer-climb-proto = "0.8.7"
 # layer-climb-proto = {path = "../climb/packages/layer-climb-proto"}
 
 # CosmWasm
-cosmwasm-schema = "3.0.2"
+cosmwasm-schema = "3"
 cosmwasm-std = { version = "=3.0.2", features = ["cosmwasm_2_0"] }
 cw-storage-plus = "3.0.1"
 cw2 = "3.0.0"
