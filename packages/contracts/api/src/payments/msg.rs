@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint256;
+use cosmwasm_std::{Addr, Uint256};
 use wavs_types::contracts::cosmwasm::service_handler::{
     ServiceHandlerExecuteMessages, ServiceHandlerQueryMessages,
 };
@@ -37,15 +37,29 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
+pub enum ComponentMsg {
+    Receive {
+        address: Addr,
+        user_id: i64,
+        user_name: Option<String>,
+    },
+    Send {
+        handle: String,
+        amount: u64,
+        user_id: i64,
+        user_name: Option<String>,
+    },
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Must be called by WAVS operators
     RegisterReceive(RegisterReceiveMsg),
     /// Must be called by WAVS operators
     SendPayment(SendPaymentMsg),
     /// Called directly by the blockchain account authorizing payments
-    RegisterSend {
-        tg_handle: String,
-    },
+    RegisterSend { tg_handle: String },
+    /// The payload is Vec<ComponentMsg>
     // #[serde(untagged)]
     Wavs(ServiceHandlerExecuteMessages),
 }
