@@ -84,6 +84,17 @@ Or build a specific component
 task components:build COMPONENT=operator
 ```
 
+#### Execute a component directly
+
+This will execute the operator component to read messages from the Telegram bot
+
+```bash
+# Read updates that came into the bot
+task components:exec-operator-read-updates
+# Read those that parse as commands
+task components:exec-operator-read-commands
+```
+
 ## Backend
 
 ### Chains

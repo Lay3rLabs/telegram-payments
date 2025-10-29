@@ -7,6 +7,7 @@ rust-version.workspace = true
 repository.workspace = true
 
 [dependencies]
+tg-utils = { workspace = true, features = ["wasi"] }
 tg-contract-api = { workspace = true }
 layer-climb = { workspace = true }
 serde = { workspace = true }

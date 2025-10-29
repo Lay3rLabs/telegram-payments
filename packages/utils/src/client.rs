@@ -9,10 +9,13 @@ use cw_multi_test::{App, Executor};
 #[cfg(feature = "multitest")]
 use std::{cell::RefCell, rc::Rc};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use layer_climb::prelude::*;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
+
+#[allow(unused_imports)]
+use anyhow::anyhow;
 
 use crate::addr::AnyAddr;
 

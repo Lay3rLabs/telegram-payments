@@ -1,4 +1,8 @@
-use tg_utils::telegram::{api::TelegramMessage, error::TgResult, messenger::TelegramMessenger};
+use tg_utils::telegram::{
+    api::TelegramMessage,
+    error::TgResult,
+    messenger::{any_client::TelegramMessengerExt, reqwest_client::TelegramMessenger},
+};
 
 #[derive(Clone, Default)]
 pub struct HttpState {}
@@ -24,7 +28,7 @@ impl HttpState {
 }
 
 pub struct TelegramBot {
-    messenger: TelegramMessenger<reqwest::Client>,
+    messenger: TelegramMessenger,
     group_id: i64,
 }
 

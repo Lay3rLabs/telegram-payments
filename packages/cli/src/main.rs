@@ -6,7 +6,9 @@ mod output;
 use std::process::exit;
 
 use serde::{de::DeserializeOwned, Deserialize};
-use tg_utils::{faucet, tracing::tracing_init};
+use tg_utils::{
+    faucet, telegram::messenger::any_client::TelegramMessengerExt, tracing::tracing_init,
+};
 use wavs_types::{
     ComponentSource, Service, ServiceManager, SignatureKind, Submit, Trigger, Workflow,
 };

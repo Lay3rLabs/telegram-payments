@@ -22,6 +22,20 @@ task deploy:tap-faucet-all
 task contracts:build-all && task components:build-all
 ```
 
+Then it's as simple as this to deploy everything
+
+```bash
+task deploy:all
+```
+Alternatively, skip uploading contracts and/or components
+this assumes they were already uploaded before and the output files exist
+
+```bash
+task deploy:all SKIP_UPLOAD_CONTRACTS=true SKIP_UPLOAD_COMPONENTS=true
+```
+
+What's this all doing?
+
 Ultimately, deploying consists of the following steps:
 
 1. Upload middleware service manager contract to code id
@@ -34,16 +48,8 @@ Ultimately, deploying consists of the following steps:
 8. Add the service manager address to aggregator node
 9. Add the service manager address to wavs nodes
 
-You can do all of these steps in one shot like so:
 
-```bash
-task deploy:all
-# Alternative, skip uploading contracts and/or components
-# this assumes they were already uploaded before and the output files exist
-task deploy:all SKIP_UPLOAD_CONTRACTS=true SKIP_UPLOAD_COMPONENTS=true
-```
-
-Or you can do them one by one as described below.
+Each of these steps with independent commands is described below.
 
 ## Deploying middleware service manager
 

@@ -32,6 +32,7 @@ pub async fn handle_tg_webhook(
                 method: TelegramResponseMethod::SendMessge,
                 chat_id,
                 text: msg,
+                parse_mode: Some("Markdown".to_string()),
             };
 
             Json(response).into_response()
@@ -50,21 +51,45 @@ fn parse_command(req: TelegramWebHookRequest) -> TgResult<TelegramBotCommand> {
 
 async fn handle_command(state: HttpState, command: TelegramBotCommand) -> TgResult<String> {
     match command.clone() {
-        TelegramBotCommand::Start => {
-            Ok("Welcome to the bot! Use /register <address> to register.".to_string())
-        }
+        TelegramBotCommand::Start => Ok("Welcome to the bot! send /help for help!".to_string()),
         TelegramBotCommand::Wavs(wavs_command) => match wavs_command.clone() {
-            tg_utils::telegram::api::TelegramWavsCommand::Register { address, .. } => {
+            tg_utils::telegram::api::TelegramWavsCommand::Receive { address, .. } => {
                 state
                     .tg_bot()
-                    .send_message_to_group(&format!("{wavs_command:?}"))
+                    .send_message_to_group(&serde_json::to_string(&wavs_command).map_err(|e| {
+                        TelegramBotError::Parse(format!(
+                            "Failed to serialize receive command: {}",
+                            e.to_string()
+                        ))
+                    })?)
                     .await?;
                 Ok(format!("okay, you got it, registered {address}"))
-                //handle_register(address).await
+            }
+            tg_utils::telegram::api::TelegramWavsCommand::Send { handle, amount, .. } => {
+                state
+                    .tg_bot()
+                    .send_message_to_group(&serde_json::to_string(&wavs_command).map_err(|e| {
+                        TelegramBotError::Parse(format!(
+                            "Failed to serialize send command: {}",
+                            e.to_string()
+                        ))
+                    })?)
+                    .await?;
+                Ok(format!("okay, you got it, sending {amount} to {handle}"))
             }
             tg_utils::telegram::api::TelegramWavsCommand::GroupId { group_id } => {
                 Ok(format!("Group ID is {group_id}"))
                 //handle_register(address).await
+            }
+            tg_utils::telegram::api::TelegramWavsCommand::Help {} => {
+                Ok(r#"*Available commands:*
+                    `/start` - Start interaction with the bot
+                    `/help` - Show this help message
+                    `/groupId` - Get the current group chat ID
+                    `/receive <address>` - Register to receive WAVS payments at the specified address
+                    `/send <handle> <amount>` - Register to send WAVS payments to the specified handle
+                    "#.to_string()
+                )
             }
         },
     }

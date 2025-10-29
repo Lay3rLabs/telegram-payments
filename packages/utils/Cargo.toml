@@ -13,12 +13,14 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-full = ["multitest", "client-pool", "client", "telegram", "dep:tokio", "dep:toml", "reqwest"]
+full = ["multitest", "client-pool", "wasi", "dep:tokio", "dep:toml", "reqwest"]
+wasi = ["client", "telegram", "wstd", "dep:wavs-wasi-utils"]
 multitest = ["dep:cw-multi-test"]
 client-pool = ["dep:deadpool"]
 client = []
 telegram = []
 reqwest = ["dep:reqwest"]
+wstd = ["dep:wstd"]
 
 [dependencies]
 tg-contract-api = { workspace = true}
@@ -38,3 +40,5 @@ reqwest = {workspace = true, optional = true}
 tokio = {workspace = true, optional = true}
 deadpool = { workspace = true, optional = true }
 cw-multi-test = { workspace = true, optional = true }
+wstd = { workspace = true, optional = true }
+wavs-wasi-utils = { workspace = true, optional = true }
