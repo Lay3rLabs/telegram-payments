@@ -10,10 +10,9 @@ publish = false
 
 [features]
 default = []
-on-chain = ["tg-utils/on-chain"]
 
 [dependencies]
-tg-utils = { workspace = true }
+tg-utils = { workspace = true, features = ["binary"] }
 tg-contract-payments = { workspace = true}
 tg-contract-api= { workspace = true}
 wavs-types = { workspace = true }

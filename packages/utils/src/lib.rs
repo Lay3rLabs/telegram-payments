@@ -1,10 +1,12 @@
 pub mod addr;
 
+#[cfg(feature = "client")]
 pub mod client;
+
 cfg_if::cfg_if! {
-    if #[cfg(feature = "on-chain")] {
-        mod on_chain;
-        pub use on_chain::*;
+    if #[cfg(feature = "binary")] {
+        mod binary;
+        pub use binary::*;
     }
 }
 pub mod tracing;

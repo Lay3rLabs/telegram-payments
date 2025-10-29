@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 tg-contract-api = { workspace = true }
-tg-utils = { workspace = true, features = ["on-chain"] }
+tg-utils = { workspace = true, features = ["binary"] }
 tokio = {workspace = true}
 clap = {workspace = true}
 dotenvy = {workspace = true}
