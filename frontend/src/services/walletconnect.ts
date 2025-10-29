@@ -5,6 +5,7 @@
 
 import SignClient from "@walletconnect/sign-client";
 import type { SessionTypes } from "@walletconnect/types";
+import { log } from "../debug";
 
 export interface WalletConnectAccount {
   address: string;
@@ -42,8 +43,12 @@ export async function initWalletConnect(): Promise<SignClient> {
 
   // Check for existing sessions on init
   const sessions = signClient.session.getAll();
+  log(`Found ${sessions.length} existing WalletConnect sessions`);
   if (sessions.length > 0) {
     currentSession = sessions[sessions.length - 1]; // Use most recent session
+    log(`Restored WalletConnect session: ${currentSession.peer.metadata.name}`);
+    log(`  Topic: ${currentSession.topic.substring(0, 16)}...`);
+    log(`  Accounts: ${currentSession.namespaces.cosmos?.accounts?.length || 0}`);
   }
 
   return signClient;

@@ -3,12 +3,11 @@
  * Handles connection to Keplr browser extension
  */
 
-import type { Keplr } from "@keplr-wallet/types";
 import { toBase64 } from "@cosmjs/encoding";
 
 declare global {
   interface Window {
-    keplr?: Keplr;
+    keplr?: any;
   }
 }
 

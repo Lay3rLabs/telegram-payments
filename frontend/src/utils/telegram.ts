@@ -41,12 +41,12 @@ export function showPopup(
   params: {
     title?: string;
     message: string;
-    buttons?: Array<{ id?: string; type?: string; text?: string }>;
+    buttons?: Array<{ id?: string; type?: 'default' | 'ok' | 'close' | 'cancel' | 'destructive'; text?: string }>;
   },
   callback?: (buttonId: string) => void
 ): void {
   if (WebApp.isVersionAtLeast('6.2')) {
-    WebApp.showPopup(params, callback);
+    WebApp.showPopup(params as any, callback ? (id) => callback(id || 'ok') : undefined);
   } else {
     // Fallback to browser alert
     const message = params.title ? `${params.title}\n\n${params.message}` : params.message;

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import WebApp from "@twa-dev/sdk";
 import { generateKeyPair, importKeyPair } from "../services/crypto";
 import type { KeyPair } from "../services/crypto";
-import { saveAccount } from "../services/storage";
+import { saveAccount, saveMnemonic, saveWalletType } from "../services/storage";
 import {
   showAlert,
   showConfirm,
@@ -171,6 +171,7 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
 
               hapticNotification("success");
               await new Promise((resolve) => setTimeout(resolve, 500));
+              saveWalletType('walletconnect');
               saveAccount({
                 address: account.address,
                 publicKey: account.publicKey,
@@ -269,6 +270,7 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
         localStorage.removeItem("wc_connecting_state");
         hapticNotification("success");
         await new Promise((resolve) => setTimeout(resolve, 500));
+        saveWalletType('walletconnect');
         saveAccount({
           address: account.address,
           publicKey: account.publicKey,
@@ -336,12 +338,23 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
     hapticImpact("medium");
     try {
       const importedKeyPair = await importKeyPair(trimmedMnemonic);
-      hapticNotification("success");
-      saveAccount({
-        address: importedKeyPair.address,
-        publicKey: importedKeyPair.publicKey,
-      });
-      onAccountCreated();
+
+      showConfirm(
+        "Save mnemonic to device for easy signing? (Less secure but more convenient)\n\nIf NO, you'll need to enter it each time you sign.",
+        (saveMnemonicToDevice) => {
+          if (saveMnemonicToDevice) {
+            // Save mnemonic to localStorage
+            saveMnemonic(trimmedMnemonic);
+          }
+          saveWalletType('local');
+          hapticNotification("success");
+          saveAccount({
+            address: importedKeyPair.address,
+            publicKey: importedKeyPair.publicKey,
+          });
+          onAccountCreated();
+        }
+      );
     } catch (err) {
       console.error("Failed to import mnemonic:", err);
       hapticNotification("error");
@@ -379,6 +392,7 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
       console.log("✅ Wallet approved! Account:", walletAccount);
 
       hapticNotification("success");
+      saveWalletType('walletconnect');
       saveAccount({
         address: walletAccount.address,
         publicKey: walletAccount.publicKey,
@@ -404,9 +418,12 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
     if (!keyPair) return;
 
     showConfirm(
-      "Have you saved your mnemonic? It will not be shown again!",
-      (confirmed) => {
-        if (confirmed) {
+      "Save mnemonic to device for easy signing? (Less secure but more convenient)\n\nIf NO, you'll need to enter it each time you sign.",
+      (saveMnemonicToDevice) => {
+        if (saveMnemonicToDevice) {
+          // Save mnemonic to localStorage
+          saveMnemonic(keyPair.mnemonic);
+          saveWalletType('local');
           hapticNotification("success");
           saveAccount({
             address: keyPair.address,
@@ -414,7 +431,14 @@ export function AccountCreation({ onAccountCreated }: AccountCreationProps) {
           });
           onAccountCreated();
         } else {
-          hapticNotification("warning");
+          // Don't save mnemonic, only save address and public key
+          saveWalletType('local');
+          hapticNotification("success");
+          saveAccount({
+            address: keyPair.address,
+            publicKey: keyPair.publicKey,
+          });
+          onAccountCreated();
         }
       }
     );
