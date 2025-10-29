@@ -1,5 +1,7 @@
 use tg_utils::telegram::{
-    api::TelegramMessage, error::TgResult, messenger::reqwest_client::TelegramMessenger,
+    api::TelegramMessage,
+    error::TgResult,
+    messenger::{any_client::TelegramMessengerExt, reqwest_client::TelegramMessenger},
 };
 
 #[derive(Clone, Default)]

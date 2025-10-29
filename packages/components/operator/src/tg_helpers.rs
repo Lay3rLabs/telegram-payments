@@ -1,6 +1,8 @@
 use crate::host::{self, LogLevel};
 use anyhow::{anyhow, Result};
-use tg_utils::telegram::messenger::wasi_client::TelegramMessenger;
+use tg_utils::telegram::messenger::{
+    any_client::TelegramMessengerExt, wasi_client::TelegramMessenger,
+};
 
 pub fn read_messages() -> Result<Vec<String>> {
     host::log(LogLevel::Info, "Reading messages...");

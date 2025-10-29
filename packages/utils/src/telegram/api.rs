@@ -60,7 +60,6 @@ impl TryFrom<&TelegramMessage> for TelegramBotCommand {
                             },
                             _ => Err(TelegramBotError::BadCommand(text)),
                         },
-                        _ => Err(TelegramBotError::BadCommand(text)),
                     }
                 } else {
                     Err(TelegramBotError::UnknownCommand(text))

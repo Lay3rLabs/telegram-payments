@@ -115,7 +115,7 @@ schemars = "1.0.4"
 serde-json-wasm = "1.0.1"
 
 # WASI
-wstd = "0.6.1"
+wstd = "0.5.3"
 wit-bindgen-rt = "0.44.0"
 wit-bindgen = "0.47.0"
 

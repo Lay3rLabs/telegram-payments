@@ -1,0 +1,96 @@
+use async_trait::async_trait;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::telegram::{
+    api::{TelegramMessage, TelegramUser, TelegramWebHookInfo},
+    error::{TelegramBotError, TgResult},
+};
+
+// Works with WASI and Reqwest clients
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait TelegramMessengerExt {
+    // impl these
+    fn token(&self) -> &str;
+    async fn fetch_string(&self, url: &str) -> TgResult<String>;
+    async fn fetch_params(&self, url: &str, params: &HashMap<String, String>) -> TgResult<String>;
+
+    // get the rest for free
+    async fn get_me(&self) -> TgResult<TelegramUser> {
+        self.make_request_empty("getMe").await
+    }
+
+    async fn set_webhook(&self, url: &str, secret: &str) -> TgResult<()> {
+        let mut params = HashMap::new();
+        params.insert("url".to_string(), url.to_string());
+        params.insert("secret_token".to_string(), secret.to_string());
+        params.insert("drop_pending_updates".to_string(), "True".to_string());
+
+        let success = self
+            .make_request_params::<bool>("setWebhook", params)
+            .await?;
+
+        if success {
+            Ok(())
+        } else {
+            Err(TelegramBotError::Internal(
+                "Failed to set webhook".to_string(),
+            ))
+        }
+    }
+
+    async fn get_webhook(&self) -> TgResult<TelegramWebHookInfo> {
+        self.make_request_empty("getWebhookInfo").await
+    }
+
+    async fn send_message(&self, chat_id: i64, text: &str) -> TgResult<TelegramMessage> {
+        let mut params = HashMap::new();
+        params.insert("chat_id".to_string(), chat_id.to_string());
+        params.insert("text".to_string(), text.to_string());
+
+        self.make_request_params("sendMessage", params).await
+    }
+
+    async fn make_request_params<T: DeserializeOwned>(
+        &self,
+        method: &str,
+        params: HashMap<String, String>,
+    ) -> TgResult<T> {
+        let url = format!("https://api.telegram.org/bot{}/{}", self.token(), method);
+
+        let text = self.fetch_params(&url, &params).await?;
+
+        tracing::info!("Response: {}", text);
+
+        let json: TelegramResult<T> =
+            serde_json::from_str(&text).map_err(|e| TelegramBotError::Internal(e.to_string()))?;
+
+        if json.ok {
+            Ok(json.result)
+        } else {
+            Err(TelegramBotError::Internal("Telegram API error".to_string()))
+        }
+    }
+
+    async fn make_request_empty<T: DeserializeOwned>(&self, method: &str) -> TgResult<T> {
+        let url = format!("https://api.telegram.org/bot{}/{}", self.token(), method);
+
+        let text = self.fetch_string(&url).await?;
+
+        let json: TelegramResult<T> =
+            serde_json::from_str(&text).map_err(|e| TelegramBotError::Internal(e.to_string()))?;
+
+        if json.ok {
+            Ok(json.result)
+        } else {
+            Err(TelegramBotError::Internal("Telegram API error".to_string()))
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct TelegramResult<T> {
+    ok: bool,
+    result: T,
+}
