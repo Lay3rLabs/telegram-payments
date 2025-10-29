@@ -38,6 +38,9 @@ You can do all of these steps in one shot like so:
 
 ```bash
 task deploy:all
+# Alternative, skip uploading contracts and/or components
+# this assumes they were already uploaded before and the output files exist
+task deploy:all SKIP_UPLOAD_CONTRACTS=true SKIP_UPLOAD_COMPONENTS=true
 ```
 
 Or you can do them one by one as described below.
