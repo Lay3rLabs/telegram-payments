@@ -8,7 +8,7 @@
 import { EncodeObject } from "@interchainjs/cosmos-types";
 import { MsgExecuteContract } from "interchainjs/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@interchainjs/encoding";
-import { Auth, InstantiateMsg, ExecuteMsg, Uint256, ServiceHandlerExecuteMessages, WavsEnvelope, Binary, HexBinary, EvmAddr, RegisterReceiveMsg, SendPaymentMsg, WavsSignatureData, QueryMsg, ServiceHandlerQueryMessages, ChainAddrResponse, AdminResponse, ArrayOfString, ArrayOfCoin, Coin, TgHandleResponse, Null } from "./TgContractPayments.types";
+import { Auth, InstantiateMsg, ExecuteMsg, CustomExecuteMsg, Uint256, ServiceHandlerExecuteMessages, WavsEnvelope, Binary, HexBinary, EvmAddr, RegisterReceiveMsg, SendPaymentMsg, WavsSignatureData, QueryMsg, CustomQueryMsg, ServiceHandlerQueryMessages, ChainAddrResponse, AdminResponse, ArrayOfString, ArrayOfCoin, Coin, TgHandleResponse, Addr } from "./TgContractPayments.types";
 export interface TgContractPaymentsMsg {
   contractAddress: string;
   sender: string;
@@ -35,7 +35,13 @@ export interface TgContractPaymentsMsg {
   }: {
     tgHandle: string;
   }, funds_?: Coin[]) => EncodeObject;
-  wavs: (serviceHandlerExecuteMessages: ServiceHandlerExecuteMessages, funds_?: Coin[]) => EncodeObject;
+  wavsHandleSignedEnvelope: ({
+    envelope,
+    signatureData
+  }: {
+    envelope: WavsEnvelope;
+    signatureData: WavsSignatureData;
+  }, funds_?: Coin[]) => EncodeObject;
 }
 export class TgContractPaymentsMsgComposer implements TgContractPaymentsMsg {
   sender: string;
@@ -46,7 +52,7 @@ export class TgContractPaymentsMsgComposer implements TgContractPaymentsMsg {
     this.registerReceive = this.registerReceive.bind(this);
     this.sendPayment = this.sendPayment.bind(this);
     this.registerSend = this.registerSend.bind(this);
-    this.wavs = this.wavs.bind(this);
+    this.wavsHandleSignedEnvelope = this.wavsHandleSignedEnvelope.bind(this);
   }
   registerReceive = ({
     chainAddr,
@@ -117,14 +123,23 @@ export class TgContractPaymentsMsgComposer implements TgContractPaymentsMsg {
       })
     };
   };
-  wavs = (serviceHandlerExecuteMessages: ServiceHandlerExecuteMessages, funds_?: Coin[]): EncodeObject => {
+  wavsHandleSignedEnvelope = ({
+    envelope,
+    signatureData
+  }: {
+    envelope: WavsEnvelope;
+    signatureData: WavsSignatureData;
+  }, funds_?: Coin[]): EncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
       value: MsgExecuteContract.fromPartial({
         sender: this.sender,
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
-          wavs: serviceHandlerExecuteMessages
+          wavs_handle_signed_envelope: {
+            envelope,
+            signature_data: signatureData
+          }
         })),
         funds: funds_
       })
