@@ -115,6 +115,20 @@ pub enum CliCommand {
         #[clap(flatten)]
         args: CliArgs,
     },
+    TelegramSetWebhook {
+        #[arg(long)]
+        webhook: Url,
+
+        #[arg(long)]
+        webhook_secret: String,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    TelegramGetWebhook {
+        #[clap(flatten)]
+        args: CliArgs,
+    },
 }
 
 // common args for several commands

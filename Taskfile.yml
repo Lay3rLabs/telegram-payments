@@ -11,6 +11,7 @@ includes:
   backend: ./taskfile/backend.yml
   deploy: ./taskfile/deploy.yml
   test: ./taskfile/test.yml
+  telegram: ./taskfile/telegram.yml
 
 tasks:
   default:

@@ -12,7 +12,7 @@ publish = false
 default = []
 
 [dependencies]
-tg-utils = { workspace = true, features = ["binary"] }
+tg-utils = { workspace = true, features = ["full"] }
 tg-contract-payments = { workspace = true}
 tg-contract-api= { workspace = true}
 wavs-types = { workspace = true }

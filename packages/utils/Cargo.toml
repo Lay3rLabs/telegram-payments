@@ -13,14 +13,17 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-client = []
-binary = ["multitest", "client-pool", "client", "dep:tokio", "dep:toml", "dep:reqwest"]
+full = ["multitest", "client-pool", "client", "telegram", "dep:tokio", "dep:toml", "reqwest"]
 multitest = ["dep:cw-multi-test"]
 client-pool = ["dep:deadpool"]
+client = []
+telegram = []
+reqwest = ["dep:reqwest"]
 
 [dependencies]
 tg-contract-api = { workspace = true}
 serde = { workspace = true }
+serde_json = { workspace = true }
 cosmwasm-std = { workspace = true }
 layer-climb = { workspace = true }
 tracing = {workspace = true}
@@ -28,6 +31,8 @@ cfg-if = {workspace = true}
 tracing-subscriber = {workspace = true}
 anyhow = {workspace = true}
 wavs-types = {workspace = true}
+thiserror = {workspace = true}
+async-trait = {workspace = true}
 toml = {workspace = true, optional = true}
 reqwest = {workspace = true, optional = true}
 tokio = {workspace = true, optional = true}

@@ -5163,10 +5163,14 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "axum",
+ "clap",
+ "dotenvy",
+ "reqwest",
  "rustls",
  "serde_json",
  "tg-contract-api",
  "tg-utils",
+ "thiserror 2.0.17",
  "tokio",
  "tower-http",
  "tracing",
@@ -5191,6 +5195,7 @@ name = "tg-utils"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "async-trait",
  "cfg-if",
  "cosmwasm-std",
  "cw-multi-test",
@@ -5198,7 +5203,9 @@ dependencies = [
  "layer-climb",
  "reqwest",
  "serde",
+ "serde_json",
  "tg-contract-api",
+ "thiserror 2.0.17",
  "tokio",
  "toml 0.9.8",
  "tracing",

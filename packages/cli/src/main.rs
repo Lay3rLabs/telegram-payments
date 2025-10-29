@@ -30,6 +30,23 @@ async fn main() {
     let ctx = CliContext::new().await;
 
     match ctx.command.clone() {
+        CliCommand::TelegramGetWebhook { args: _ } => {
+            let webhook_info = ctx.tg_messenger().get_webhook().await.unwrap();
+
+            println!("{webhook_info:#?}");
+        }
+        CliCommand::TelegramSetWebhook {
+            webhook,
+            webhook_secret,
+            args: _,
+        } => {
+            ctx.tg_messenger()
+                .set_webhook(webhook.as_str(), &webhook_secret)
+                .await
+                .unwrap();
+
+            tracing::info!("Webhook set successfully");
+        }
         CliCommand::AssertAccountExists { addr, args: _ } => {
             let client = ctx.query_client().await.unwrap();
             let addr = match addr {

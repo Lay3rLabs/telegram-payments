@@ -74,16 +74,20 @@ tasks:
   ###################################################################
   ######################## SERVER ###################################
   ###################################################################
-  #
+
   start-server:
     desc: "Start the backend server"
     cmds:
-      - cd packages/server && cargo run
+      - cd packages/server && cargo run -- --port {{.SERVER_PORT}}
 
   start-server-watch:
     desc: "Start the backend server in watch mode (auto-restart on code changes)"
     cmds:
-      - cd packages/server && watchexec --restart --clear --delay-run 1s -e rs,toml -w . -w ../utils -w ../contracts/api -- cargo run
+      - cd packages/server && watchexec --restart --clear --delay-run 1s -e rs,toml -w . -w ../utils -w ../contracts/api -- cargo run -- --port {{.SERVER_PORT}}
+
+  ngrok-start:
+    cmds:
+      - ngrok http --url={{.NGROK_URL}} {{.SERVER_PORT}}
 
   ###################################################################
   ######################## WAVS #####################################
