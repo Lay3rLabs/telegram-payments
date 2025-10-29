@@ -1,7 +1,6 @@
+use anyhow::bail;
 use layer_climb::prelude::CosmosAddr;
 use serde::{Deserialize, Serialize};
-
-use crate::telegram::error::TelegramBotError;
 
 #[derive(Clone, Debug)]
 pub enum TelegramBotCommand {
@@ -9,74 +8,136 @@ pub enum TelegramBotCommand {
     Wavs(TelegramWavsCommand),
 }
 
+// TODO: store the sending user_id, chat_id separate from the command (these are not parsed from the text)
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TelegramWavsCommand {
     Help,
     Receive {
         address: CosmosAddr,
-        user_id: i64,
-        user_name: Option<String>,
     },
     Send {
         handle: String,
         amount: u64,
-        user_id: i64,
-        user_name: Option<String>,
+        denom: String,
     },
     Status,
 }
 
-impl TryFrom<&TelegramMessage> for TelegramBotCommand {
-    type Error = TelegramBotError;
+#[derive(Clone, Debug)]
+pub struct MessageData {
+    pub user_id: i64,
+    pub user_name: Option<String>,
+    pub chat_id: i64,
+    pub text: Option<String>,
+}
 
-    fn try_from(message: &TelegramMessage) -> Result<Self, Self::Error> {
-        match message.text.clone() {
-            Some(text) => {
-                let parts: Vec<&str> = text.split_whitespace().collect();
+impl MessageData {
+    pub fn parse(msg: &TelegramMessage) -> Self {
+        Self {
+            user_id: msg.from.id,
+            user_name: msg.from.username.clone(),
+            chat_id: msg.chat.id,
+            text: msg.text.clone(),
+        }
+    }
+}
 
-                if parts.len() > 0 {
-                    tracing::info!("PARTS: {:?}", parts);
-                    match message.chat.chat_type {
-                        TelegramChatType::Private | TelegramChatType::Group => match parts[..] {
-                            ["/start"] => Ok(TelegramBotCommand::Start),
-                            ["/help"] => Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Help)),
-                            ["/status"] => {
-                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Status))
-                            }
-                            ["/send", handle, amount] => {
-                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Send {
-                                    user_id: message.from.id,
-                                    user_name: message.from.username.clone(),
-                                    handle: handle.to_string(),
-                                    amount: amount.parse().map_err(|e| {
-                                        TelegramBotError::Parse(format!(
-                                            "could not parse {text}: {e:?}"
-                                        ))
-                                    })?,
-                                }))
-                            }
-                            ["/receive", address] => {
-                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Receive {
-                                    user_id: message.from.id,
-                                    user_name: message.from.username.clone(),
-                                    address: address.parse().map_err(|e| {
-                                        TelegramBotError::Parse(format!(
-                                            "could not parse {text}: {e:?}"
-                                        ))
-                                    })?,
-                                }))
-                            }
-                            _ => Err(TelegramBotError::BadCommand(text)),
-                        },
-                        TelegramChatType::SuperGroup | TelegramChatType::Channel => {
-                            Err(TelegramBotError::BadCommand(text))
-                        }
-                    }
-                } else {
-                    Err(TelegramBotError::UnknownCommand(text))
-                }
+/// These are types for the state machine of parsing commands.
+/// Only contains intermediate state, we get:
+/// (State, Text) -> (State, Option<Command>)
+#[derive(Clone, Debug)]
+pub enum TGChatState {
+    Wait,
+    WavsReceive,
+    WavsSend,
+    WavsSendHandle(String),
+    WavsSendHandleAmount(String, u64),
+}
+
+impl TGChatState {
+    // Prompt for the next step, or None
+    pub fn prompt(&self) -> Option<String> {
+        match self {
+            TGChatState::Wait => None,
+            TGChatState::WavsReceive => {
+                Some("What blockchain address would you like to receive to?".to_string())
             }
-            None => Err(TelegramBotError::EmptyMessage),
+            TGChatState::WavsSend => Some("Who would you like to send to?".to_string()),
+            TGChatState::WavsSendHandle(handle) => {
+                Some(format!("How much would you like to send to {}?", handle))
+            }
+            TGChatState::WavsSendHandleAmount(_, _) => Some("Which denom?".to_string()),
+        }
+    }
+}
+
+pub fn next_state(
+    state: &TGChatState,
+    text: &str,
+) -> anyhow::Result<(TGChatState, Option<TelegramBotCommand>)> {
+    match state {
+        TGChatState::Wait => match text {
+            "/start" => Ok((TGChatState::Wait, Some(TelegramBotCommand::Start))),
+            "/help" => Ok((
+                TGChatState::Wait,
+                Some(TelegramBotCommand::Wavs(TelegramWavsCommand::Help)),
+            )),
+            "/status" => Ok((
+                TGChatState::Wait,
+                Some(TelegramBotCommand::Wavs(TelegramWavsCommand::Status)),
+            )),
+            "/send" => Ok((TGChatState::WavsSend, None)),
+            "/receive" => Ok((TGChatState::WavsReceive, None)),
+            x => bail!("unknown command: {x}"),
+        },
+        TGChatState::WavsReceive => {
+            if text.starts_with("/") {
+                return next_state(&TGChatState::Wait, text);
+            }
+            let address = text.parse::<CosmosAddr>()?;
+            Ok((
+                TGChatState::Wait,
+                Some(TelegramBotCommand::Wavs(TelegramWavsCommand::Receive {
+                    address,
+                })),
+            ))
+        }
+        TGChatState::WavsSend => {
+            if text.starts_with("/") {
+                return next_state(&TGChatState::Wait, text);
+            }
+            // get handle
+            let handle = text.trim();
+            if !handle.starts_with("@") {
+                bail!("Provide a telegram username, starting with @");
+            }
+            Ok((TGChatState::WavsSendHandle(handle.to_string()), None))
+        }
+        TGChatState::WavsSendHandle(handle) => {
+            if text.starts_with("/") {
+                return next_state(&TGChatState::Wait, text);
+            }
+            // get amount
+            let amount: u64 = text.trim().parse()?;
+            Ok((
+                TGChatState::WavsSendHandleAmount(handle.to_string(), amount),
+                None,
+            ))
+        }
+        TGChatState::WavsSendHandleAmount(handle, amount) => {
+            if text.starts_with("/") {
+                return next_state(&TGChatState::Wait, text);
+            }
+            // get denom
+            let denom = text.trim();
+            Ok((
+                TGChatState::Wait,
+                Some(TelegramBotCommand::Wavs(TelegramWavsCommand::Send {
+                    handle: handle.to_string(),
+                    amount: *amount,
+                    denom: denom.to_string(),
+                })),
+            ))
         }
     }
 }
