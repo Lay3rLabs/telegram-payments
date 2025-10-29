@@ -5,6 +5,7 @@ services:
     stop_signal: SIGKILL
     environment:
       - WAVS_SUBMISSION_MNEMONIC=${WAVS_OPERATOR_MNEMONIC:-}
+      - WAVS_ENV_OPERATOR_TELEGRAM_BOT_TOKEN=${WAVS_ENV_OPERATOR_TELEGRAM_BOT_TOKEN:-}
       - RUST_LOG=${WAVS_LOG_LEVEL:-}
       - WAVS_LOG_LEVEL=${WAVS_LOG_LEVEL:-}
     command:

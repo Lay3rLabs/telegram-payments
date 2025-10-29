@@ -197,6 +197,7 @@ tasks:
     vars:
       WAVS_INSTANCE: "{{index .MATCH 0}}"
     env:
+      WAVS_ENV_OPERATOR_TELEGRAM_BOT_TOKEN: "{{.WAVS_OPERATOR_TELEGRAM_BOT_TOKEN}}"
       COMPOSE_PROJECT_NAME: "wavs-operator-{{.WAVS_INSTANCE}}"
       COMPOSE_WAVS_PORT:
         sh: task backend:get-wavs-operator-port-{{.WAVS_INSTANCE}}
