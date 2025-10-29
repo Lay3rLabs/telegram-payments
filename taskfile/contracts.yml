@@ -78,6 +78,7 @@ tasks:
       - mkdir -p "./builds/schema"
       - rm -rf "./builds/schema/{{.CONTRACT}}"
       - cd "{{.CONTRACT_PATH}}" && cargo schema && cd -
+      - rm -rf "{{.CONTRACT_PATH}}/schema/cw_schema"
       - mv "{{.CONTRACT_PATH}}/schema" "./builds/schema/{{.CONTRACT}}"
       - echo "Built schema for contract {{.CONTRACT}} at ./builds/schema/{{.CONTRACT}}"
 

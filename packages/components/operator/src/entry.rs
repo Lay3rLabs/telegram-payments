@@ -13,6 +13,7 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
         TriggerData::Raw(data) => {
             let data = str::from_utf8(&data)?;
             match data {
+                // TODO: include the offset somewhere here for debugging?
                 "read-updates" => {
                     let updates = get_updates(Some(20i64), None)?;
                     for update in updates {
@@ -35,6 +36,7 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
             Ok(None)
         }
         TriggerData::Cron(_) => {
+            // TODO: we need to store the offset between queries, right?
             let commands = get_updates(None, None)?
                 .into_iter()
                 .filter_map(parse_update)

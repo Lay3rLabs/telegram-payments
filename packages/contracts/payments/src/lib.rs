@@ -4,7 +4,9 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
-use tg_contract_api::payments::msg::{Auth, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use tg_contract_api::payments::msg::{
+    Auth, CustomExecuteMsg, CustomQueryMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use wavs_types::contracts::cosmwasm::service_handler::{
     ServiceHandlerExecuteMessages, ServiceHandlerQueryMessages,
 };
@@ -61,11 +63,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::RegisterReceive(msg) => execute::register_receive(deps, env, info, msg),
-        ExecuteMsg::RegisterSend { tg_handle } => {
-            execute::register_send(deps, env, info, tg_handle)
-        }
-        ExecuteMsg::SendPayment(msg) => execute::send_payment(deps, env, info, msg),
+        ExecuteMsg::Custom(msg) => match msg {
+            CustomExecuteMsg::RegisterReceive(msg) => {
+                execute::register_receive(deps, env, info, msg)
+            }
+            CustomExecuteMsg::RegisterSend { tg_handle } => {
+                execute::register_send(deps, env, info, tg_handle)
+            }
+            CustomExecuteMsg::SendPayment(msg) => execute::send_payment(deps, env, info, msg),
+        },
         ExecuteMsg::Wavs(msg) => match msg {
             ServiceHandlerExecuteMessages::WavsHandleSignedEnvelope {
                 envelope,
@@ -78,13 +84,19 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::AddrByTg { handle } => to_json_binary(&query::addr_by_tg(deps, handle)?),
-        QueryMsg::TgByAddr { account } => to_json_binary(&query::tg_by_addr(deps, account)?),
-        QueryMsg::Admin {} => to_json_binary(&query::admin(deps)?),
-        QueryMsg::PendingPayments { handle } => {
-            to_json_binary(&query::pending_payments(deps, handle)?)
-        }
-        QueryMsg::AllowedDenoms {} => to_json_binary(&query::allowed_denoms(deps)?),
+        QueryMsg::Custom(msg) => match msg {
+            CustomQueryMsg::AddrByTg { handle } => {
+                to_json_binary(&query::addr_by_tg(deps, handle)?)
+            }
+            CustomQueryMsg::TgByAddr { account } => {
+                to_json_binary(&query::tg_by_addr(deps, account)?)
+            }
+            CustomQueryMsg::Admin {} => to_json_binary(&query::admin(deps)?),
+            CustomQueryMsg::PendingPayments { handle } => {
+                to_json_binary(&query::pending_payments(deps, handle)?)
+            }
+            CustomQueryMsg::AllowedDenoms {} => to_json_binary(&query::allowed_denoms(deps)?),
+        },
         QueryMsg::Wavs(msg) => match msg {
             ServiceHandlerQueryMessages::WavsServiceManager {} => {
                 to_json_binary(&query::wavs_service_manager(deps)?)

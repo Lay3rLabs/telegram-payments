@@ -1,4 +1,4 @@
-use tg_contract_api::payments::msg::{ComponentMsg, ExecuteMsg};
+use tg_contract_api::payments::msg::ComponentMsg;
 use tg_utils::telegram::api::{TelegramMessage, TelegramUpdate, TelegramWavsCommand};
 
 pub fn parse_update(update: TelegramUpdate) -> Option<(TelegramMessage, TelegramWavsCommand)> {

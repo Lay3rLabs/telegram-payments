@@ -7,7 +7,7 @@
 
 import { ICosmWasmClient, ISigningCosmWasmClient } from "./baseClient";
 import { StdFee } from "@interchainjs/types";
-import { Auth, InstantiateMsg, ExecuteMsg, Uint256, ServiceHandlerExecuteMessages, WavsEnvelope, Binary, HexBinary, EvmAddr, RegisterReceiveMsg, SendPaymentMsg, WavsSignatureData, QueryMsg, ServiceHandlerQueryMessages, ChainAddrResponse, AdminResponse, ArrayOfString, ArrayOfCoin, Coin, TgHandleResponse, Null } from "./TgContractPayments.types";
+import { Auth, InstantiateMsg, ExecuteMsg, CustomExecuteMsg, Uint256, ServiceHandlerExecuteMessages, WavsEnvelope, Binary, HexBinary, EvmAddr, RegisterReceiveMsg, SendPaymentMsg, WavsSignatureData, QueryMsg, CustomQueryMsg, ServiceHandlerQueryMessages, ChainAddrResponse, AdminResponse, ArrayOfString, ArrayOfCoin, Coin, TgHandleResponse, Addr } from "./TgContractPayments.types";
 export interface TgContractPaymentsReadOnlyInterface {
   contractAddress: string;
   addrByTg: ({
@@ -27,7 +27,7 @@ export interface TgContractPaymentsReadOnlyInterface {
     handle: string;
   }) => Promise<ArrayOfCoin>;
   allowedDenoms: () => Promise<ArrayOfString>;
-  wavs: (serviceHandlerQueryMessages: ServiceHandlerQueryMessages) => Promise<Null>;
+  wavsServiceManager: () => Promise<Addr>;
 }
 export class TgContractPaymentsQueryClient implements TgContractPaymentsReadOnlyInterface {
   client: ICosmWasmClient;
@@ -40,7 +40,7 @@ export class TgContractPaymentsQueryClient implements TgContractPaymentsReadOnly
     this.admin = this.admin.bind(this);
     this.pendingPayments = this.pendingPayments.bind(this);
     this.allowedDenoms = this.allowedDenoms.bind(this);
-    this.wavs = this.wavs.bind(this);
+    this.wavsServiceManager = this.wavsServiceManager.bind(this);
   }
   addrByTg = async ({
     handle
@@ -85,9 +85,9 @@ export class TgContractPaymentsQueryClient implements TgContractPaymentsReadOnly
       allowed_denoms: {}
     });
   };
-  wavs = async (serviceHandlerQueryMessages: ServiceHandlerQueryMessages): Promise<Null> => {
+  wavsServiceManager = async (): Promise<Addr> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      wavs: serviceHandlerQueryMessages
+      wavs_service_manager: {}
     });
   };
 }
@@ -117,7 +117,13 @@ export interface TgContractPaymentsInterface extends TgContractPaymentsReadOnlyI
   }: {
     tgHandle: string;
   }, fee_?: number | StdFee | "auto", memo_?: string, funds_?: Coin[]) => Promise<any>;
-  wavs: (serviceHandlerExecuteMessages: ServiceHandlerExecuteMessages, fee_?: number | StdFee | "auto", memo_?: string, funds_?: Coin[]) => Promise<any>;
+  wavsHandleSignedEnvelope: ({
+    envelope,
+    signatureData
+  }: {
+    envelope: WavsEnvelope;
+    signatureData: WavsSignatureData;
+  }, fee_?: number | StdFee | "auto", memo_?: string, funds_?: Coin[]) => Promise<any>;
 }
 export class TgContractPaymentsClient extends TgContractPaymentsQueryClient implements TgContractPaymentsInterface {
   client: ISigningCosmWasmClient;
@@ -131,7 +137,7 @@ export class TgContractPaymentsClient extends TgContractPaymentsQueryClient impl
     this.registerReceive = this.registerReceive.bind(this);
     this.sendPayment = this.sendPayment.bind(this);
     this.registerSend = this.registerSend.bind(this);
-    this.wavs = this.wavs.bind(this);
+    this.wavsHandleSignedEnvelope = this.wavsHandleSignedEnvelope.bind(this);
   }
   registerReceive = async ({
     chainAddr,
@@ -178,9 +184,18 @@ export class TgContractPaymentsClient extends TgContractPaymentsQueryClient impl
       }
     }, fee_, memo_, funds_);
   };
-  wavs = async (serviceHandlerExecuteMessages: ServiceHandlerExecuteMessages, fee_: number | StdFee | "auto" = "auto", memo_?: string, funds_?: Coin[]): Promise<any> => {
+  wavsHandleSignedEnvelope = async ({
+    envelope,
+    signatureData
+  }: {
+    envelope: WavsEnvelope;
+    signatureData: WavsSignatureData;
+  }, fee_: number | StdFee | "auto" = "auto", memo_?: string, funds_?: Coin[]): Promise<any> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      wavs: serviceHandlerExecuteMessages
+      wavs_handle_signed_envelope: {
+        envelope,
+        signature_data: signatureData
+      }
     }, fee_, memo_, funds_);
   };
 }

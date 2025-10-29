@@ -1,7 +1,7 @@
 use cosmwasm_schema::write_api;
- 
+
 use tg_contract_api::payments::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
- 
+
 fn main() {
     write_api! {
         instantiate: InstantiateMsg,

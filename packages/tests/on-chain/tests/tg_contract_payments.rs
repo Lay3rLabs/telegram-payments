@@ -2,7 +2,7 @@ use cosmwasm_std::Addr;
 use layer_climb::prelude::*;
 use layer_climb_proto::Any;
 use on_chain_tests::client::{payments::PaymentsClient, AppClient};
-use tg_contract_api::payments::msg::ExecuteMsg;
+use tg_contract_api::payments::msg::{CustomExecuteMsg, ExecuteMsg};
 use tg_test_common::shared_tests::{self, payments::RegisterReceivesOpenAccountProps};
 use tg_utils::tracing::tracing_init;
 
@@ -202,8 +202,8 @@ async fn send_payment_then_register_receiver() {
 // Alice then registers to send with a grant of 500_000 tokens.
 // Alice sends 200_000 tokens to bob, which works (check balances)
 // Alice then sends another 250_000 tokens that also work (multiple sends, but below the grant)
-// Finally, Alice tries to send a final 100_000 tokens, but this fails as it hits the grant limit. 
-// Note that we assert the final error message string, so we can use that to detect when a fill up is needed. 
+// Finally, Alice tries to send a final 100_000 tokens, but this fails as it hits the grant limit.
+// Note that we assert the final error message string, so we can use that to detect when a fill up is needed.
 #[tokio::test]
 async fn send_multiple_payments() {
     tracing_init();
@@ -298,7 +298,7 @@ async fn send_multiple_payments() {
 
     // Assert that the third send failed
     assert!(result.is_err(), "third send should fail due to grant limit");
-    
+
     // Check the error message to detect when a fill up is needed
     // Note that it is only visible in the "Caused by" section of the anyhow error
     let full_error = format!("{:?}", result.unwrap_err());
@@ -338,9 +338,9 @@ async fn build_registration_messages(
 ) -> Vec<Any> {
     let contract_addr: Address = CosmosAddr::try_from(contract_addr).unwrap().into();
 
-    let register_msg = ExecuteMsg::RegisterSend {
+    let register_msg = ExecuteMsg::Custom(CustomExecuteMsg::RegisterSend {
         tg_handle: tg_handle.to_string(),
-    };
+    });
 
     let exec_msg = granter
         .contract_execute_msg(&contract_addr, vec![], &register_msg)

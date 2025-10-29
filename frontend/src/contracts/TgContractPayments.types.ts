@@ -14,7 +14,8 @@ export interface InstantiateMsg {
   allowed_denoms: string[];
   auth: Auth;
 }
-export type ExecuteMsg = {
+export type ExecuteMsg = CustomExecuteMsg | ServiceHandlerExecuteMessages;
+export type CustomExecuteMsg = {
   register_receive: RegisterReceiveMsg;
 } | {
   send_payment: SendPaymentMsg;
@@ -22,8 +23,6 @@ export type ExecuteMsg = {
   register_send: {
     tg_handle: string;
   };
-} | {
-  wavs: ServiceHandlerExecuteMessages;
 };
 export type Uint256 = string;
 export type ServiceHandlerExecuteMessages = {
@@ -51,7 +50,8 @@ export interface WavsSignatureData {
   signatures: HexBinary[];
   signers: EvmAddr[];
 }
-export type QueryMsg = {
+export type QueryMsg = CustomQueryMsg | ServiceHandlerQueryMessages;
+export type CustomQueryMsg = {
   addr_by_tg: {
     handle: string;
   };
@@ -67,8 +67,6 @@ export type QueryMsg = {
   };
 } | {
   allowed_denoms: {};
-} | {
-  wavs: ServiceHandlerQueryMessages;
 };
 export type ServiceHandlerQueryMessages = {
   wavs_service_manager: {};
@@ -88,4 +86,4 @@ export interface Coin {
 export interface TgHandleResponse {
   handle?: string | null;
 }
-export type Null = null;
+export type Addr = string;

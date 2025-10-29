@@ -12,7 +12,7 @@ use crate::{
 };
 
 use tg_contract_api::payments::msg::{
-    AdminResponse, ChainAddrResponse, ExecuteMsg, QueryMsg, RegisterReceiveMsg, SendPaymentMsg,
+    AdminResponse, ChainAddrResponse, ExecuteMsg, CustomQueryMsg, CustomExecuteMsg, QueryMsg, RegisterReceiveMsg, SendPaymentMsg,
     TgHandleResponse,
 };
 
@@ -34,14 +34,14 @@ impl PaymentsQuerier {
     }
 
     pub async fn admin(&self) -> Result<Option<String>> {
-        let resp: AdminResponse = self.query(&QueryMsg::Admin {}).await?;
+        let resp: AdminResponse = self.query(&QueryMsg::Custom(CustomQueryMsg::Admin {})).await?;
 
         Ok(resp.admin)
     }
 
     pub async fn addr_by_tg_handle(&self, tg_handle: String) -> Result<Option<String>> {
         let resp: ChainAddrResponse = self
-            .query(&QueryMsg::AddrByTg { handle: tg_handle })
+            .query(&QueryMsg::Custom(CustomQueryMsg::AddrByTg { handle: tg_handle }))
             .await?;
 
         Ok(resp.addr)
@@ -49,14 +49,14 @@ impl PaymentsQuerier {
 
     pub async fn tg_handle_by_addr(&self, user_addr: String) -> Result<Option<String>> {
         let resp: TgHandleResponse = self
-            .query(&QueryMsg::TgByAddr { account: user_addr })
+            .query(&QueryMsg::Custom(CustomQueryMsg::TgByAddr { account: user_addr }))
             .await?;
 
         Ok(resp.handle)
     }
 
     pub async fn allowed_denoms(&self) -> Result<Vec<String>> {
-        self.query(&QueryMsg::AllowedDenoms {}).await
+        self.query(&QueryMsg::Custom(CustomQueryMsg::AllowedDenoms {})).await
     }
 }
 
@@ -84,10 +84,10 @@ impl PaymentsExecutor {
         user_addr: &AnyAddr,
     ) -> Result<AnyTxResponse> {
         self.exec(
-            &ExecuteMsg::RegisterReceive(RegisterReceiveMsg {
+            &ExecuteMsg::Custom(CustomExecuteMsg::RegisterReceive(RegisterReceiveMsg {
                 tg_handle,
                 chain_addr: user_addr.to_string(),
-            }),
+            })),
             &[],
         )
         .await
@@ -100,13 +100,13 @@ impl PaymentsExecutor {
         amount: impl Into<Uint256>,
         denom: &str,
     ) -> Result<AnyTxResponse> {
-        self.exec(
-            &ExecuteMsg::SendPayment(SendPaymentMsg {
+        self.exec(  
+            &ExecuteMsg::Custom(CustomExecuteMsg::SendPayment(SendPaymentMsg {
                 from_tg: from_tg.to_string(),
                 to_tg: to_tg.to_string(),
-                amount: amount.into(),
+                amount: amount.into(),  
                 denom: denom.to_string(),
-            }),
+            })),
             &[],
         )
         .await
