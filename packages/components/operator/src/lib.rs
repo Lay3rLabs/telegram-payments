@@ -1,5 +1,7 @@
 mod entry;
+mod tg_helpers;
 
+// this is needed just to make the ide/compiler happy... we're _always_ compiling to wasm32-wasi
 wit_bindgen::generate!({
     world: "wavs-world",
     generate_all,
@@ -8,8 +10,8 @@ wit_bindgen::generate!({
 struct Component;
 
 impl Guest for Component {
-    fn run(_trigger_action: TriggerAction) -> Result<Option<WasmResponse>, _rt::String> {
-        Ok(None)
+    fn run(trigger_action: TriggerAction) -> Result<Option<WasmResponse>, String> {
+        entry::handle_action(trigger_action).map_err(|e| e.to_string())
     }
 }
 

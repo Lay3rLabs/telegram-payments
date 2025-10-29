@@ -41,10 +41,7 @@ tg-contract-payments = { path = "packages/contracts/payments" }
 wavs-types = { version = "=2.0.0-alpha.7", default-features = false, features = [
   "cosmwasm",
 ] }
-wavs-types-full = { package = "wavs-types", version = "=2.0.0-alpha.7", features = [
-  "full",
-] }
-wavs-wasi-utils = "0.5.1"
+wavs-wasi-utils = "2.0.0"
 
 # Error handling
 anyhow = "1.0.98"

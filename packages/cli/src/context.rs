@@ -2,7 +2,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use layer_climb::prelude::*;
 use tg_utils::{
-    config::load_chain_configs_from_wavs, path::repo_root, telegram::messenger::TelegramMessenger,
+    config::load_chain_configs_from_wavs, path::repo_root,
+    telegram::messenger::reqwest_client::TelegramMessenger,
 };
 
 use crate::command::{CliArgs, CliCommand};
@@ -104,7 +105,7 @@ impl CliContext {
         Ok(address)
     }
 
-    pub fn tg_messenger(&self) -> TelegramMessenger<reqwest::Client> {
+    pub fn tg_messenger(&self) -> TelegramMessenger {
         let bot_token = std::env::var("SERVER_TELEGRAM_BOT_TOKEN").unwrap_or_default();
         if bot_token.is_empty() {
             panic!("SERVER_TELEGRAM_BOT_TOKEN is not set");

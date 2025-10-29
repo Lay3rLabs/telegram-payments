@@ -117,3 +117,23 @@ tasks:
       - wkg get "{{.WIT_ITEM}}" --output "./packages/components/{{.COMPONENT}}/wit/"
       - wkg wit fetch -d "./packages/components/{{.COMPONENT}}/wit"
       - echo "Completed fetch for {{.WIT_ITEM}}"
+
+  ###################################################################
+  ######################## EXEC #####################################
+  ###################################################################
+
+  exec-operator-read-messages:
+    cmds:
+      - >
+        docker run --rm
+        --network host
+        -v "{{.WAVS_HOME_DIR}}":/wavs-home:ro
+        -v "{{.COMPONENTS_ARTIFACTS_PATH}}":/components:ro
+        -e WAVS_HOME="/wavs-home"
+        -e CLI_MNEMONIC="{{.CLI_MNEMONIC}}"
+        -e WAVS_ENV_OPERATOR_TELEGRAM_BOT_TOKEN="{{.WAVS_OPERATOR_TELEGRAM_BOT_TOKEN}}"
+        {{.WAVS_DOCKER_IMAGE}}
+        wavs-cli exec
+        --log-level '{{.RUST_LOG | default "info"}}'
+        --component /components/{{.COMPONENT_PREFIX}}_operator.wasm
+        --input "read-messages"

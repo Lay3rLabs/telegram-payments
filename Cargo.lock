@@ -5098,11 +5098,12 @@ dependencies = [
  "layer-climb",
  "serde",
  "tg-contract-api",
+ "tg-utils",
  "thiserror 2.0.17",
  "wavs-types",
  "wavs-wasi-utils",
  "wit-bindgen 0.47.0",
- "wit-bindgen-rt 0.44.0",
+ "wit-bindgen-rt",
  "wstd 0.6.1",
 ]
 
@@ -5112,6 +5113,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "bincode",
+ "cfg-if",
  "cosmwasm-std",
  "layer-climb",
  "serde",
@@ -5121,7 +5123,7 @@ dependencies = [
  "wavs-types",
  "wavs-wasi-utils",
  "wit-bindgen 0.47.0",
- "wit-bindgen-rt 0.44.0",
+ "wit-bindgen-rt",
  "wstd 0.6.1",
 ]
 
@@ -5211,6 +5213,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wavs-types",
+ "wavs-wasi-utils",
+ "wstd 0.6.1",
 ]
 
 [[package]]
@@ -6070,9 +6074,9 @@ dependencies = [
 
 [[package]]
 name = "wavs-wasi-utils"
-version = "0.5.1"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a195f2d28206d9ae96bdba0d8ba854a45a30689af28d064ba43e07e42b331d8"
+checksum = "e05a80e4ff42d1f13a7f247dd34e377eb586bea634881cf9f98b0762a228ef54"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives",
@@ -6089,7 +6093,6 @@ dependencies = [
  "serde_json",
  "tower-service",
  "wasi 0.14.7+wasi-0.2.4",
- "wit-bindgen-rt 0.43.0",
  "wstd 0.5.6",
 ]
 
@@ -6427,17 +6430,6 @@ dependencies = [
  "anyhow",
  "heck",
  "wit-parser",
-]
-
-[[package]]
-name = "wit-bindgen-rt"
-version = "0.43.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fd734226eac1fd7c450956964e3a9094c9cee65e9dafdf126feef8c0096db65"
-dependencies = [
- "bitflags",
- "futures",
- "once_cell",
 ]
 
 [[package]]

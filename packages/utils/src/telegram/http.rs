@@ -1,49 +1,58 @@
+use crate::telegram::error::*;
 use std::collections::HashMap;
-use async_trait::async_trait;
-use crate::telegram::error::TgResult;
 
-/// Trait for making HTTP requests to the Telegram Bot API
-#[async_trait]
-pub trait HttpClient: Send + Sync {
-    /// Perform a GET request and return the response body as text
-    async fn get(&self, url: &str) -> TgResult<String>;
+#[cfg(feature = "reqwest")]
+async fn reqwest_get(client: reqwest::Client, url: &str) -> TgResult<String> {
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP GET error: {}", e)))?;
 
-    /// Perform a POST request with form data and return the response body as text
-    async fn post_form(&self, url: &str, params: HashMap<String, String>) -> TgResult<String>;
+    response
+        .text()
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("Failed to read response: {}", e)))
+}
+
+#[cfg(feature = "wasi")]
+async fn wasi_get(url: &str) -> TgResult<String> {
+    let req = wavs_wasi_utils::http::http_request_get(url)
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP GET error: {}", e)))?;
+    let text = wavs_wasi_utils::http::fetch_string(req)
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP GET error: {}", e)))?;
+
+    Ok(text)
 }
 
 #[cfg(feature = "reqwest")]
-mod reqwest_impl {
-    use super::*;
-    use crate::telegram::error::TelegramBotError;
+async fn reqwest_post_form(
+    client: reqwest::Client,
+    url: &str,
+    params: HashMap<String, String>,
+) -> TgResult<String> {
+    let response = client
+        .post(url)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP POST error: {}", e)))?;
 
-    #[async_trait]
-    impl HttpClient for reqwest::Client {
-        async fn get(&self, url: &str) -> TgResult<String> {
-            let response = self
-                .get(url)
-                .send()
-                .await
-                .map_err(|e| TelegramBotError::Internal(format!("HTTP GET error: {}", e)))?;
+    response
+        .text()
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("Failed to read response: {}", e)))
+}
 
-            response
-                .text()
-                .await
-                .map_err(|e| TelegramBotError::Internal(format!("Failed to read response: {}", e)))
-        }
+#[cfg(feature = "wasi")]
+async fn wasi_post_form(url: &str, params: HashMap<String, String>) -> TgResult<String> {
+    let req = wavs_wasi_utils::http::http_request_post_form(url, params)
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP POST error: {}", e)))?;
 
-        async fn post_form(&self, url: &str, params: HashMap<String, String>) -> TgResult<String> {
-            let response = self
-                .post(url)
-                .form(&params)
-                .send()
-                .await
-                .map_err(|e| TelegramBotError::Internal(format!("HTTP POST error: {}", e)))?;
+    let text = wavs_wasi_utils::http::fetch_string(req)
+        .await
+        .map_err(|e| TelegramBotError::Internal(format!("HTTP POST error: {}", e)))?;
 
-            response
-                .text()
-                .await
-                .map_err(|e| TelegramBotError::Internal(format!("Failed to read response: {}", e)))
-        }
-    }
+    Ok(text)
 }
