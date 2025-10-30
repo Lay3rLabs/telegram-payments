@@ -40,7 +40,7 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
             let commands = get_updates(None, None)?
                 .into_iter()
                 .filter_map(parse_update)
-                .filter_map(|(_, cmd)| map_command_to_contract(cmd))
+                .filter_map(map_command_to_contract)
                 .collect::<Vec<_>>();
 
             Ok(Some(WasmResponse {

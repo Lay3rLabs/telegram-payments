@@ -1,10 +1,12 @@
 use crate::state::HttpState;
 use axum::{extract::State, http::Response, response::IntoResponse, Json};
+use layer_climb::prelude::CosmosAddr;
 use tg_utils::telegram::{
     api::{
-        TelegramBotCommand, TelegramResponseMethod, TelegramWebHookRequest, TelegramWebHookResponse,
+        bot::{TelegramBotCommand, TelegramWavsCommand, TelegramWavsCommandPrefix},
+        native::{TelegramResponseMethod, TelegramWebHookRequest, TelegramWebHookResponse},
     },
-    error::{TelegramBotError, TgResult},
+    error::TgResult,
 };
 
 #[axum::debug_handler]
@@ -16,18 +18,52 @@ pub async fn handle_tg_webhook(
 
     let chat_id = req.message.as_ref().map(|m| m.chat.id);
 
-    let msg = match parse_command(req) {
-        Ok(command) => match handle_command(state, command).await {
-            Ok(resp_text) => resp_text,
-            Err(e) => {
-                format!("Error handling command: {:?}", e)
+    let message = match req.message {
+        Some(msg) => msg,
+        None => {
+            if req.edited_message.is_some() {
+                tracing::debug!("Ignoring edited message");
+            } else {
+                tracing::debug!("No message found in the request");
             }
+            return Response::new(().into());
+        }
+    };
+
+    if let Some(users) = message.new_chat_members.as_ref().and_then(|users| {
+        if users.is_empty() {
+            None
+        } else {
+            Some(users)
+        }
+    }) {
+        for user in users {
+            if let Err(e) = state
+                .tg_bot()
+                .send_message_to_group(&format!(
+                    "Welcome, {}!\n\nSend `{}` to see all available commands.\n\nTo get started, send this command to register and receive any funds waiting for you!\n\n```Registration: {} {}```",
+                    user.first_name,
+                    TelegramWavsCommandPrefix::Help,
+                    TelegramWavsCommandPrefix::Receive,
+                    TelegramWavsCommandPrefix::Receive.format()
+                ))
+                .await
+            {
+                tracing::error!("failed to send welcome message: {e:?}");
+            }
+        }
+    }
+
+    let msg = match TelegramBotCommand::try_from(message) {
+        Ok(command) => match handle_command(state, command).await {
+            Ok(response) => response.to_string(),
+            Err(e) => e.to_string(),
         },
         Err(err) => err.to_string(),
     };
 
-    match chat_id {
-        Some(chat_id) => {
+    match (chat_id, !msg.is_empty()) {
+        (Some(chat_id), true) => {
             let response = TelegramWebHookResponse {
                 method: TelegramResponseMethod::SendMessge,
                 chat_id,
@@ -37,60 +73,96 @@ pub async fn handle_tg_webhook(
 
             Json(response).into_response()
         }
-        None => Response::new(().into()),
+        _ => Response::new(().into()),
     }
 }
 
-fn parse_command(req: TelegramWebHookRequest) -> TgResult<TelegramBotCommand> {
-    if let Some(msg) = req.message {
-        TelegramBotCommand::try_from(&msg)
-    } else {
-        Err(TelegramBotError::EmptyMessage)
+enum CommandResponse {
+    Start {
+        link: String,
+    },
+    // TODO - populate the actual data
+    Status,
+    Receive {
+        address: CosmosAddr,
+    },
+    Send {
+        handle: String,
+        amount: u64,
+        denom: String,
+    },
+    GroupId {
+        group_id: i64,
+    },
+    Help,
+}
+
+impl std::fmt::Display for CommandResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommandResponse::Start { link } => {
+                write!(f, "Welcome to the bot!\n\nJoin the group to start receiving and sending WAVS payments.\n\n{link}")
+            }
+            CommandResponse::Status => {
+                write!(f, "Checking your current status, please be patient...")
+            }
+            CommandResponse::Receive { address } => {
+                write!(f, "okay, you got it, registered {address}")
+            }
+            CommandResponse::Send {
+                handle,
+                amount,
+                denom,
+            } => {
+                write!(f, "okay, you got it, sending {amount} {denom} to {handle}")
+            }
+            CommandResponse::GroupId { group_id } => {
+                write!(f, "Group ID is {group_id}")
+            }
+            CommandResponse::Help => write!(
+                f,
+                "*Available commands:*
+                `{}` - Start interaction with the bot
+                `{}` - Show this help message
+                `{}` - Check if your account has been registered for receiving or sending payments
+                `{}` - Get the current group chat ID
+                `{} {}` - Register to receive WAVS payments at the specified address
+                `{} {}` - Register to send WAVS payments to the specified handle
+                ",
+                TelegramWavsCommandPrefix::Start,
+                TelegramWavsCommandPrefix::Help,
+                TelegramWavsCommandPrefix::Status,
+                TelegramWavsCommandPrefix::GroupId,
+                TelegramWavsCommandPrefix::Receive,
+                TelegramWavsCommandPrefix::Receive.format(),
+                TelegramWavsCommandPrefix::Send,
+                TelegramWavsCommandPrefix::Send.format(),
+            ),
+        }
     }
 }
 
-async fn handle_command(state: HttpState, command: TelegramBotCommand) -> TgResult<String> {
+async fn handle_command(
+    state: HttpState,
+    TelegramBotCommand { command, raw: _ }: TelegramBotCommand,
+) -> TgResult<CommandResponse> {
     match command.clone() {
-        TelegramBotCommand::Start => Ok("Welcome to the bot! send /help for help!".to_string()),
-        TelegramBotCommand::Wavs(wavs_command) => match wavs_command.clone() {
-            tg_utils::telegram::api::TelegramWavsCommand::Receive { address, .. } => {
-                state
-                    .tg_bot()
-                    .send_message_to_group(&serde_json::to_string(&wavs_command).map_err(|e| {
-                        TelegramBotError::Parse(format!(
-                            "Failed to serialize receive command: {}",
-                            e.to_string()
-                        ))
-                    })?)
-                    .await?;
-                Ok(format!("okay, you got it, registered {address}"))
-            }
-            tg_utils::telegram::api::TelegramWavsCommand::Send { handle, amount, .. } => {
-                state
-                    .tg_bot()
-                    .send_message_to_group(&serde_json::to_string(&wavs_command).map_err(|e| {
-                        TelegramBotError::Parse(format!(
-                            "Failed to serialize send command: {}",
-                            e.to_string()
-                        ))
-                    })?)
-                    .await?;
-                Ok(format!("okay, you got it, sending {amount} to {handle}"))
-            }
-            tg_utils::telegram::api::TelegramWavsCommand::GroupId { group_id } => {
-                Ok(format!("Group ID is {group_id}"))
-                //handle_register(address).await
-            }
-            tg_utils::telegram::api::TelegramWavsCommand::Help {} => {
-                Ok(r#"*Available commands:*
-                    `/start` - Start interaction with the bot
-                    `/help` - Show this help message
-                    `/groupId` - Get the current group chat ID
-                    `/receive <address>` - Register to receive WAVS payments at the specified address
-                    `/send <handle> <amount>` - Register to send WAVS payments to the specified handle
-                    "#.to_string()
-                )
-            }
-        },
+        TelegramWavsCommand::Start => {
+            let link = state.tg_bot().generate_group_invite_link().await?;
+            Ok(CommandResponse::Start { link })
+        }
+        TelegramWavsCommand::Status {} => Ok(CommandResponse::Status),
+        TelegramWavsCommand::Receive { address, .. } => Ok(CommandResponse::Receive { address }),
+        TelegramWavsCommand::Send {
+            handle,
+            amount,
+            denom,
+        } => Ok(CommandResponse::Send {
+            handle,
+            amount,
+            denom,
+        }),
+        TelegramWavsCommand::GroupId { group_id } => Ok(CommandResponse::GroupId { group_id }),
+        TelegramWavsCommand::Help {} => Ok(CommandResponse::Help),
     }
 }

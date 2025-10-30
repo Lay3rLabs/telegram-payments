@@ -1,37 +1,32 @@
 use tg_contract_api::payments::msg::ComponentMsg;
-use tg_utils::telegram::api::{TelegramMessage, TelegramUpdate, TelegramWavsCommand};
+use tg_utils::telegram::api::{
+    bot::{TelegramBotCommand, TelegramWavsCommand},
+    native::{TelegramMessage, TelegramUpdate},
+};
 
-pub fn parse_update(update: TelegramUpdate) -> Option<(TelegramMessage, TelegramWavsCommand)> {
-    let message = update_into_message(update)?;
-    let command = message
-        .text
-        .as_ref()
-        .and_then(|text| serde_json::from_str::<TelegramWavsCommand>(&text).ok())?;
-
-    Some((message, command))
+pub fn parse_update(update: TelegramUpdate) -> Option<TelegramBotCommand> {
+    update_into_message(update).and_then(|text| TelegramBotCommand::try_from(text).ok())
 }
 
-pub fn map_command_to_contract(command: TelegramWavsCommand) -> Option<ComponentMsg> {
+pub fn map_command_to_contract(
+    TelegramBotCommand { command, raw }: TelegramBotCommand,
+) -> Option<ComponentMsg> {
     match command {
-        TelegramWavsCommand::Receive {
-            address,
-            user_id,
-            user_name,
-        } => Some(ComponentMsg::Receive {
-            user_id,
-            user_name,
+        TelegramWavsCommand::Receive { address } => Some(ComponentMsg::Receive {
             address: address.into(),
+            user_id: raw.from.id,
+            user_name: raw.from.username,
         }),
         TelegramWavsCommand::Send {
             handle,
             amount,
-            user_id,
-            user_name,
+            denom,
         } => Some(ComponentMsg::Send {
             handle,
             amount,
-            user_id,
-            user_name,
+            denom,
+            user_id: raw.from.id,
+            user_name: raw.from.username,
         }),
         _ => None,
     }

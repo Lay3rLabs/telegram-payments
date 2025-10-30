@@ -1,5 +1,5 @@
 use tg_utils::telegram::{
-    api::TelegramMessage,
+    api::native::TelegramMessage,
     error::TgResult,
     messenger::{any_client::TelegramMessengerExt, reqwest_client::TelegramMessenger},
 };
@@ -42,5 +42,11 @@ impl TelegramBot {
 
     pub async fn send_message_to_group(&self, text: &str) -> TgResult<TelegramMessage> {
         self.messenger.send_message(self.group_id, text).await
+    }
+
+    pub async fn generate_group_invite_link(&self) -> TgResult<String> {
+        self.messenger
+            .generate_group_invite_link(self.group_id)
+            .await
     }
 }
