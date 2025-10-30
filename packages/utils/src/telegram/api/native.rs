@@ -1,108 +1,9 @@
-use layer_climb::prelude::CosmosAddr;
 use serde::{Deserialize, Serialize};
 
-use crate::telegram::error::TelegramBotError;
-
-#[derive(Clone, Debug)]
-pub enum TelegramBotCommand {
-    Start,
-    Wavs(TelegramWavsCommand),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum TelegramWavsCommand {
-    Help,
-    Receive {
-        address: CosmosAddr,
-        user_id: i64,
-        user_name: Option<String>,
-    },
-    Send {
-        handle: String,
-        amount: u64,
-        user_id: i64,
-        user_name: Option<String>,
-    },
-    GroupId {
-        group_id: i64,
-    },
-}
-
-impl TryFrom<&TelegramMessage> for TelegramBotCommand {
-    type Error = TelegramBotError;
-
-    fn try_from(message: &TelegramMessage) -> Result<Self, Self::Error> {
-        match message.text.clone() {
-            Some(text) => {
-                let parts: Vec<&str> = text.split_whitespace().collect();
-
-                if parts.len() > 0 {
-                    tracing::info!("PARTS: {:?}", parts);
-                    match message.chat.chat_type {
-                        TelegramChatType::Private => match parts[..] {
-                            ["/start"] => Ok(TelegramBotCommand::Start),
-                            ["/help"] => Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Help)),
-                            ["/send", handle, amount] => {
-                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Send {
-                                    user_id: message.from.id,
-                                    user_name: message.from.username.clone(),
-                                    handle: handle.to_string(),
-                                    amount: amount.parse().map_err(|e| {
-                                        TelegramBotError::Parse(format!(
-                                            "could not parse {text}: {e:?}"
-                                        ))
-                                    })?,
-                                }))
-                            }
-                            ["/receive", address] => {
-                                Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::Receive {
-                                    user_id: message.from.id,
-                                    user_name: message.from.username.clone(),
-                                    address: address.parse().map_err(|e| {
-                                        TelegramBotError::Parse(format!(
-                                            "could not parse {text}: {e:?}"
-                                        ))
-                                    })?,
-                                }))
-                            }
-                            _ => Err(TelegramBotError::BadCommand(text)),
-                        },
-                        TelegramChatType::Group
-                        | TelegramChatType::SuperGroup
-                        | TelegramChatType::Channel => match parts[..] {
-                            ["/groupId"] => match message.chat.id {
-                                id if id < 0 => {
-                                    Ok(TelegramBotCommand::Wavs(TelegramWavsCommand::GroupId {
-                                        group_id: id,
-                                    }))
-                                }
-                                _ => Err(TelegramBotError::InvalidGroupId),
-                            },
-                            _ => Err(TelegramBotError::BadCommand(text)),
-                        },
-                    }
-                } else {
-                    Err(TelegramBotError::UnknownCommand(text))
-                }
-            }
-            None => Err(TelegramBotError::EmptyMessage),
-        }
-    }
-}
-
-pub struct TelegramWebHook {}
-
 // https://core.telegram.org/bots/api#update
-#[derive(Deserialize, Serialize, Debug)]
-pub struct TelegramWebHookRequest {
-    pub update_id: i64,
-    pub message: Option<TelegramMessage>,
-    pub edited_message: Option<TelegramMessage>,
-    pub channel_post: Option<TelegramMessage>,
-    pub edited_channel_post: Option<TelegramMessage>,
-}
+pub type TelegramWebHookRequest = TelegramUpdate;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramWebHookResponse {
     pub chat_id: i64,
     pub method: TelegramResponseMethod,
@@ -110,13 +11,14 @@ pub struct TelegramWebHookResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parse_mode: Option<String>,
 }
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum TelegramResponseMethod {
     #[serde(rename = "sendMessage")]
     SendMessge,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+// https://core.telegram.org/bots/api#message
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramMessage {
     pub message_id: i64,
     pub message_thread_id: Option<i64>,
@@ -124,9 +26,11 @@ pub struct TelegramMessage {
     pub chat: TelegramChat,
     pub date: u64,
     pub text: Option<String>,
+    pub new_chat_members: Option<Vec<TelegramUser>>,
+    pub left_chat_member: Option<TelegramUser>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramUser {
     pub id: i64,
     pub is_bot: bool,
@@ -134,7 +38,7 @@ pub struct TelegramUser {
     pub username: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChat {
     pub id: i64,
     #[serde(rename = "type")]
@@ -145,7 +49,7 @@ pub struct TelegramChat {
     pub last_name: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum TelegramChatType {
     #[serde(rename = "private")]
     Private,
@@ -157,7 +61,7 @@ pub enum TelegramChatType {
     Channel,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramWebHookInfo {
     pub url: String,
     pub has_custom_certificate: bool,
@@ -171,7 +75,7 @@ pub struct TelegramWebHookInfo {
 }
 
 // https://core.telegram.org/bots/api#update
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramUpdate {
     pub update_id: i64,
     // Message updates
@@ -208,7 +112,7 @@ pub struct TelegramUpdate {
 }
 
 // https://core.telegram.org/bots/api#callbackquery
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramCallbackQuery {
     pub id: String,
     pub from: TelegramUser,
@@ -220,7 +124,7 @@ pub struct TelegramCallbackQuery {
 }
 
 // https://core.telegram.org/bots/api#inlinequery
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramInlineQuery {
     pub id: String,
     pub from: TelegramUser,
@@ -231,7 +135,7 @@ pub struct TelegramInlineQuery {
 }
 
 // https://core.telegram.org/bots/api#choseninlineresult
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChosenInlineResult {
     pub result_id: String,
     pub from: TelegramUser,
@@ -241,7 +145,7 @@ pub struct TelegramChosenInlineResult {
 }
 
 // https://core.telegram.org/bots/api#location
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramLocation {
     pub latitude: f64,
     pub longitude: f64,
@@ -252,7 +156,7 @@ pub struct TelegramLocation {
 }
 
 // https://core.telegram.org/bots/api#poll
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramPoll {
     pub id: String,
     pub question: String,
@@ -272,7 +176,7 @@ pub struct TelegramPoll {
 }
 
 // https://core.telegram.org/bots/api#polloption
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramPollOption {
     pub text: String,
     pub text_entities: Option<Vec<TelegramMessageEntity>>,
@@ -280,7 +184,7 @@ pub struct TelegramPollOption {
 }
 
 // https://core.telegram.org/bots/api#pollanswer
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramPollAnswer {
     pub poll_id: String,
     pub voter_chat: Option<TelegramChat>,
@@ -289,7 +193,7 @@ pub struct TelegramPollAnswer {
 }
 
 // https://core.telegram.org/bots/api#messageentity
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramMessageEntity {
     #[serde(rename = "type")]
     pub entity_type: String,
@@ -302,7 +206,7 @@ pub struct TelegramMessageEntity {
 }
 
 // Stub types for business features
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramBusinessConnection {
     pub id: String,
     pub user: TelegramUser,
@@ -312,7 +216,7 @@ pub struct TelegramBusinessConnection {
     pub is_enabled: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramBusinessMessagesDeleted {
     pub business_connection_id: String,
     pub chat: TelegramChat,
@@ -320,7 +224,7 @@ pub struct TelegramBusinessMessagesDeleted {
 }
 
 // Stub types for payment features
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramShippingQuery {
     pub id: String,
     pub from: TelegramUser,
@@ -328,7 +232,7 @@ pub struct TelegramShippingQuery {
     pub shipping_address: TelegramShippingAddress,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramShippingAddress {
     pub country_code: String,
     pub state: String,
@@ -338,7 +242,7 @@ pub struct TelegramShippingAddress {
     pub post_code: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramPreCheckoutQuery {
     pub id: String,
     pub from: TelegramUser,
@@ -349,7 +253,7 @@ pub struct TelegramPreCheckoutQuery {
     pub order_info: Option<TelegramOrderInfo>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramOrderInfo {
     pub name: Option<String>,
     pub phone_number: Option<String>,
@@ -357,14 +261,14 @@ pub struct TelegramOrderInfo {
     pub shipping_address: Option<TelegramShippingAddress>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramPaidMediaPurchased {
     pub from: TelegramUser,
     pub paid_media_payload: String,
 }
 
 // Stub types for chat member features
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatMemberUpdated {
     pub chat: TelegramChat,
     pub from: TelegramUser,
@@ -376,13 +280,13 @@ pub struct TelegramChatMemberUpdated {
     pub via_chat_folder_invite_link: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatMember {
     pub status: String,
     pub user: TelegramUser,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatInviteLink {
     pub invite_link: String,
     pub creator: TelegramUser,
@@ -391,7 +295,7 @@ pub struct TelegramChatInviteLink {
     pub is_revoked: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatJoinRequest {
     pub chat: TelegramChat,
     pub from: TelegramUser,
@@ -402,13 +306,13 @@ pub struct TelegramChatJoinRequest {
 }
 
 // Stub types for boost features
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatBoostUpdated {
     pub chat: TelegramChat,
     pub boost: TelegramChatBoost,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatBoost {
     pub boost_id: String,
     pub add_date: u64,
@@ -416,13 +320,13 @@ pub struct TelegramChatBoost {
     pub source: TelegramChatBoostSource,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatBoostSource {
     pub source: String,
     pub user: Option<TelegramUser>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramChatBoostRemoved {
     pub chat: TelegramChat,
     pub boost_id: String,
@@ -431,7 +335,7 @@ pub struct TelegramChatBoostRemoved {
 }
 
 // Stub types for reaction features
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramMessageReactionUpdated {
     pub chat: TelegramChat,
     pub message_id: i64,
@@ -442,7 +346,7 @@ pub struct TelegramMessageReactionUpdated {
     pub new_reaction: Vec<TelegramReactionType>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramMessageReactionCountUpdated {
     pub chat: TelegramChat,
     pub message_id: i64,
@@ -450,7 +354,7 @@ pub struct TelegramMessageReactionCountUpdated {
     pub reactions: Vec<TelegramReactionCount>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramReactionType {
     #[serde(rename = "type")]
     pub reaction_type: String,
@@ -458,7 +362,7 @@ pub struct TelegramReactionType {
     pub custom_emoji_id: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramReactionCount {
     #[serde(rename = "type")]
     pub reaction_type: TelegramReactionType,

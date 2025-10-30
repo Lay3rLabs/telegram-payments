@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 tg-contract-api = { workspace = true }
 tg-utils = { workspace = true, features = ["full"] }
+layer-climb = { workspace = true}
 axum = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }

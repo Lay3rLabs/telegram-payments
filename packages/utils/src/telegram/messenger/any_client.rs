@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::telegram::{
-    api::{TelegramMessage, TelegramUpdate, TelegramUser, TelegramWebHookInfo},
+    api::native::{TelegramMessage, TelegramUpdate, TelegramUser, TelegramWebHookInfo},
     error::{TelegramBotError, TgResult},
 };
 
@@ -18,7 +18,18 @@ pub trait TelegramMessengerExt {
 
     // get the rest for free
     async fn get_me(&self) -> TgResult<TelegramUser> {
-        self.make_request_empty("getMe").await
+        self._make_request_empty("getMe").await
+    }
+
+    async fn generate_group_invite_link(&self, chat_id: i64) -> TgResult<String> {
+        let mut params = HashMap::new();
+        params.insert("chat_id".to_string(), chat_id.to_string());
+
+        let invite_link = self
+            ._make_request_params::<String>("exportChatInviteLink", params)
+            .await?;
+
+        Ok(invite_link)
     }
 
     async fn set_webhook(&self, url: &str, secret: &str) -> TgResult<()> {
@@ -28,7 +39,7 @@ pub trait TelegramMessengerExt {
         params.insert("drop_pending_updates".to_string(), "True".to_string());
 
         let success = self
-            .make_request_params::<bool>("setWebhook", params)
+            ._make_request_params::<bool>("setWebhook", params)
             .await?;
 
         if success {
@@ -41,7 +52,7 @@ pub trait TelegramMessengerExt {
     }
 
     async fn get_webhook(&self) -> TgResult<TelegramWebHookInfo> {
-        self.make_request_empty("getWebhookInfo").await
+        self._make_request_empty("getWebhookInfo").await
     }
 
     async fn get_updates(
@@ -72,9 +83,9 @@ pub trait TelegramMessengerExt {
         }
 
         if params.is_empty() {
-            self.make_request_empty("getUpdates").await
+            self._make_request_empty("getUpdates").await
         } else {
-            self.make_request_params("getUpdates", params).await
+            self._make_request_params("getUpdates", params).await
         }
     }
 
@@ -82,11 +93,12 @@ pub trait TelegramMessengerExt {
         let mut params = HashMap::new();
         params.insert("chat_id".to_string(), chat_id.to_string());
         params.insert("text".to_string(), text.to_string());
+        params.insert("parse_mode".to_string(), "Markdown".to_string());
 
-        self.make_request_params("sendMessage", params).await
+        self._make_request_params("sendMessage", params).await
     }
 
-    async fn make_request_params<T: DeserializeOwned>(
+    async fn _make_request_params<T: DeserializeOwned>(
         &self,
         method: &str,
         params: HashMap<String, String>,
@@ -107,7 +119,7 @@ pub trait TelegramMessengerExt {
         }
     }
 
-    async fn make_request_empty<T: DeserializeOwned>(&self, method: &str) -> TgResult<T> {
+    async fn _make_request_empty<T: DeserializeOwned>(&self, method: &str) -> TgResult<T> {
         let url = format!("https://api.telegram.org/bot{}/{}", self.token(), method);
 
         let text = self.fetch_string(&url).await?;

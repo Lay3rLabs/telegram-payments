@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use tg_utils::telegram::{
-    api::TelegramUpdate,
+    api::native::TelegramUpdate,
     messenger::{any_client::TelegramMessengerExt, wasi_client::TelegramMessenger},
 };
 
