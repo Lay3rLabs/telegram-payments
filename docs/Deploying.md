@@ -8,6 +8,12 @@ This document assumes you have already:
 
 ```bash
 task backend:start-all
+
+# Note that this is for deploying, if you want to interact with the bot you'll need to additionally do one of these
+# `task backend:server-start` OR `task backend:server-start-watch`
+#
+# and possibly also start ngrok:
+# `task backend:ngrok-start`
 ```
 
 2. Funded the wallets
@@ -27,12 +33,20 @@ Then it's as simple as this to deploy everything
 ```bash
 task deploy:all
 ```
+
 Alternatively, skip uploading contracts and/or components
 this assumes they were already uploaded before and the output files exist
 
 ```bash
 task deploy:all SKIP_UPLOAD_CONTRACTS=true SKIP_UPLOAD_COMPONENTS=true
 ```
+
+Sometimes you may need to explicitly activate the service:
+
+```bash
+task deploy:activate-service
+```
+
 
 What's this all doing?
 
@@ -43,10 +57,12 @@ Ultimately, deploying consists of the following steps:
 3. Upload our contracts to get code IDs
 4. Instantiate our contracts to get addresses
 5. Upload components to get IPFS CIDs
-6. Upload services to get IPFS CIDs
+6. Create and upload services to get IPFS CIDs (in paused state)
 7. Set the service URI on the service manager contract
 8. Add the service manager address to aggregator node
 9. Add the service manager address to wavs nodes
+10. Set the operator signing keys
+11. Recreate and reset the service URI
 
 
 Each of these steps with independent commands is described below.
@@ -163,4 +179,11 @@ The service manager address is obtained from either the middleware instantiation
 # alternatively, if you have several operators
 # task deploy:operator-add-service ADDR=<service-manager-address> OPERATORS=3
 task deploy:operator-add-service ADDR=<service-manager-address>
+```
+
+## Set operator signing keys
+
+
+```bash
+task deploy:operator-set-signing-key WEIGHT=100 FILENAME=operator-signing-key.json
 ```

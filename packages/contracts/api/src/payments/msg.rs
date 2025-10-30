@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint256};
+use cosmwasm_std::Uint256;
 use wavs_types::contracts::cosmwasm::service_handler::{
     ServiceHandlerExecuteMessages, ServiceHandlerQueryMessages,
 };
@@ -44,22 +44,6 @@ pub enum CustomQueryMsg {
 }
 
 #[cw_serde]
-pub enum ComponentMsg {
-    Receive {
-        address: Addr,
-        user_id: i64,
-        user_name: Option<String>,
-    },
-    Send {
-        handle: String,
-        amount: u64,
-        denom: String,
-        user_id: i64,
-        user_name: Option<String>,
-    },
-}
-
-#[cw_serde]
 #[schemaifier(mute_warnings)]
 #[serde(untagged)]
 pub enum ExecuteMsg {
@@ -79,12 +63,14 @@ pub enum CustomExecuteMsg {
 
 #[cw_serde]
 pub struct RegisterReceiveMsg {
+    pub message_id: i64,
     pub tg_handle: String,
     pub chain_addr: String,
 }
 
 #[cw_serde]
 pub struct SendPaymentMsg {
+    pub message_id: i64,
     pub from_tg: String,
     pub to_tg: String,
     pub amount: Uint256,
@@ -95,6 +81,23 @@ pub struct SendPaymentMsg {
 pub enum WavsPayload {
     Register(RegisterReceiveMsg),
     SendPayment(SendPaymentMsg),
+}
+
+impl WavsPayload {
+    pub fn message_id(&self) -> i64 {
+        match self {
+            WavsPayload::Register(msg) => msg.message_id,
+            WavsPayload::SendPayment(msg) => msg.message_id,
+        }
+    }
+
+    pub fn encode(&self) -> cosmwasm_std::StdResult<Vec<u8>> {
+        cosmwasm_std::to_json_vec(self)
+    }
+
+    pub fn decode(bytes: impl AsRef<[u8]>) -> cosmwasm_std::StdResult<Self> {
+        cosmwasm_std::from_json(bytes)
+    }
 }
 
 #[cw_serde]

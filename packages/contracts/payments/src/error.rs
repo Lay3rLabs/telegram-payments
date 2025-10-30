@@ -36,4 +36,7 @@ pub enum ContractError {
 
     #[error("Unknown reply id: {id}")]
     UnknownReplyId { id: u64 },
+
+    #[error("ABI decode: {0}")]
+    AbiDecode(String),
 }

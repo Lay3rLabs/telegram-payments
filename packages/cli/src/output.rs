@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::ValueEnum;
+use layer_climb::prelude::EvmAddr;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tg_utils::path::repo_root;
@@ -8,8 +9,7 @@ use wavs_types::{ComponentDigest, ServiceDigest};
 use crate::command::{CliArgs, ComponentKind, ContractKind};
 
 pub struct Output {
-    pub directory: PathBuf,
-    pub file: PathBuf,
+    pub output_filename: String,
     pub format: OutputFormat,
 }
 
@@ -21,21 +21,8 @@ pub enum OutputFormat {
 
 impl CliArgs {
     pub fn output(&self) -> Output {
-        let directory = repo_root()
-            .expect("could not determine repo root")
-            .join("builds")
-            .join("deployments");
-
-        let file = directory.join(&self.output_filename);
-
-        // Ensure the output directory exists
-        std::fs::create_dir_all(&directory).unwrap_or_else(|_| {
-            panic!("Failed to create output directory: {}", directory.display())
-        });
-
         Output {
-            directory,
-            file,
+            output_filename: self.output_filename.clone(),
             format: self.output_format,
         }
     }
@@ -43,16 +30,40 @@ impl CliArgs {
 
 impl Output {
     pub async fn write(&self, data: impl Serialize) -> Result<()> {
+        let directory = self.directory();
+        let file = directory.join(&self.output_filename);
+
+        // Ensure the output directory exists
+        std::fs::create_dir_all(&directory).unwrap_or_else(|_| {
+            panic!("Failed to create output directory: {}", directory.display())
+        });
+
         match self.format {
             OutputFormat::Json => {
                 let json_data = serde_json::to_string_pretty(&data)?;
-                tokio::fs::write(&self.file, json_data).await?;
+                tokio::fs::write(&file, json_data).await?;
             }
         }
-        tracing::info!("Output written to {}", self.file.display());
+        tracing::info!("Output written to {}", file.display());
 
         Ok(())
     }
+
+    pub fn directory(&self) -> PathBuf {
+        repo_root()
+            .expect("could not determine repo root")
+            .join("builds")
+            .join("deployments")
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub struct OutputOperatorSetSigningKey {
+    pub service_manager_tx_hash: String,
+    pub stake_registry_tx_hash: String,
+    pub evm_operator_address: EvmAddr,
+    pub evm_signing_key_address: EvmAddr,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

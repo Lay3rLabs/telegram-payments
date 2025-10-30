@@ -1,5 +1,6 @@
 mod entry;
 mod parse;
+mod state;
 mod tg_helpers;
 
 // this is needed just to make the ide/compiler happy... we're _always_ compiling to wasm32-wasi

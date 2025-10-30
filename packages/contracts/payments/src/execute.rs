@@ -83,7 +83,12 @@ pub fn wavs_handle_envelope(
         },
     )?;
 
-    let payload: WavsPayload = cosmwasm_std::from_json(envelope.as_slice())?;
+    let envelope = envelope
+        .decode()
+        .map_err(|e| ContractError::AbiDecode(e.to_string()))?;
+
+    let payload = WavsPayload::decode(envelope.payload)?;
+
     match payload {
         WavsPayload::Register(msg) => _register_receive(deps, msg.tg_handle, msg.chain_addr),
         WavsPayload::SendPayment(msg) => {

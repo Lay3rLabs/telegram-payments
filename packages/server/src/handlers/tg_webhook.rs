@@ -2,6 +2,7 @@ mod status;
 
 use crate::state::HttpState;
 use axum::{extract::State, http::Response, response::IntoResponse, Json};
+use cosmwasm_std::Uint256;
 use layer_climb::prelude::CosmosAddr;
 use status::query_status;
 use tg_utils::telegram::{
@@ -99,7 +100,7 @@ enum CommandResponse {
     },
     Send {
         handle: String,
-        amount: u64,
+        amount: Uint256,
         denom: String,
     },
     GroupId {

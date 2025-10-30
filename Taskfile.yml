@@ -21,7 +21,8 @@ tasks:
   clean:
     desc: "Clean all artifacts"
     cmds:
-      - rm -rf "{{.ARTIFCACTS_PATH}}"
+      - echo "Cleaning artifacts in {{.ARTIFACTS_PATH}}"
+      - rm -rf "{{.ARTIFACTS_PATH}}"
 
   lint:
     desc: "Run code formatting and linting checks"
@@ -29,3 +30,26 @@ tasks:
       - cargo fmt --all -- --check
       - cargo fix --allow-dirty --allow-staged
       - cargo clippy --all-targets -- -D warnings
+
+  docker-pull:
+    desc: "Pull required Docker images"
+    cmds:
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.COSMWASM_OPTIMIZER_IMAGE}}
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.WAVS_DOCKER_IMAGE}}
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.WAVS_CW_MIDDLEWARE_DOCKER_IMAGE}}
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.JAEGER_DOCKER_IMAGE}}
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.PROMETHEUS_DOCKER_IMAGE}}
+      - |
+        {{.DOCKER_SUDO}} docker pull {{.IPFS_DOCKER_IMAGE}}
+
+  foo:
+    cmds:
+      - task components:build COMPONENT=operator
+      - task components:build COMPONENT=aggregator
+      - task deploy:operator-delete-service
+      - task deploy:all SKIP_UPLOAD_CONTRACTS=true

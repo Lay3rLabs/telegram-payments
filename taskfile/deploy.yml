@@ -30,19 +30,9 @@ tasks:
           CODE_ID:
             sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/payments-code-id.json" | jq -r '.code_id'
           FILENAME: payments.json
-      - task: service-upload
+      - task: upload-and-set-service
         vars:
-          CONTRACT_PAYMENTS: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/payments.json"
-          MIDDLEWARE: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json"
-          COMPONENT_OPERATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/operator-cid.json"
-          COMPONENT_AGGREGATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/aggregator-cid.json"
-          FILENAME: service-cid.json
-      - task: middleware-set-service-uri
-        vars:
-          ADDR:
-            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
-          URI:
-            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.gateway_url'
+          ACTIVATE: "true"
       - task: aggregator-register-service
         vars:
           ADDR:
@@ -51,8 +41,55 @@ tasks:
         vars:
           ADDR:
             sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+      - task: operator-set-signing-key
+        vars:
+          WEIGHT: "100"
+          FILENAME: "operator-signing-key.json"
       - echo ""
       - echo "✅ Deployment completed! Artifacts are in {{.DEPLOYMENTS_ARTIFACTS_PATH}}"
+      - echo ""
+      - task: post-deploy-all
+
+  post-deploy-all:
+    vars:
+      SERVICE_URI:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.uri'
+      SERVICE_GATEWAY_URL:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.gateway_url'
+      SERVICE_MANAGER:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+    cmds:
+      - |
+        echo "Service Manager Address: {{.SERVICE_MANAGER}}"
+      - |
+        echo "Service URI: {{.SERVICE_URI}}"
+      - |
+        echo "Service URL: {{.SERVICE_GATEWAY_URL}}"
+
+  activate-service:
+    vars:
+      ACTIVATE: "true"
+    cmds:
+      - task: upload-and-set-service
+
+  upload-and-set-service:
+    required:
+      vars: [ACTIVATE]
+    cmds:
+      - task: service-upload
+        vars:
+          CONTRACT_PAYMENTS: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/payments.json"
+          MIDDLEWARE: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json"
+          COMPONENT_OPERATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/operator-cid.json"
+          COMPONENT_AGGREGATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/aggregator-cid.json"
+          FILENAME: service-cid.json
+          ACTIVATE: "{{.ACTIVATE}}"
+      - task: middleware-set-service-uri
+        vars:
+          ADDR:
+            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+          URI:
+            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.gateway_url'
 
   all-upload-contracts:
     vars:
@@ -122,9 +159,13 @@ tasks:
     deps: [assert-account-exists]
     requires:
       vars: [FILENAME, CODE_ID]
+    vars:
+      AUTH_ADDRESS:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json" | jq -r '.service_manager_address'
+      AUTH_KIND: "service_manager"
     cmds:
       - echo "🚀 Instantiating Payments contract..."
-      - cd packages/cli && cargo run instantiate-payments --output-filename={{.FILENAME}} --code-id={{.CODE_ID}}
+      - cd packages/cli && cargo run instantiate-payments --output-filename={{.FILENAME}} --code-id={{.CODE_ID}} --auth-address={{.AUTH_ADDRESS}} --auth-kind={{.AUTH_KIND}}
 
   ###################################################################
   ######################## FAUCET   #################################
@@ -240,6 +281,51 @@ tasks:
         --output-path "/output/{{.FILENAME}}"
 
   ###################################################################
+  ################### OPERATOR / STAKE REGISTRY #####################
+  ###################################################################
+  operator-set-signing-key:
+    requires:
+      vars: [WEIGHT, FILENAME]
+    vars:
+      OPERATORS_RANGE:
+        sh: seq 1 {{.OPERATORS | default "1"}}
+    cmds:
+      - for: { var: OPERATORS_RANGE }
+        task: operator-set-signing-key-{{.ITEM}}
+        vars:
+          WEIGHT: "{{.WEIGHT}}"
+          FILENAME: "{{.FILENAME}}"
+
+  operator-set-signing-key-*:
+    deps: [assert-account-exists]
+    requires:
+      vars: [WEIGHT, FILENAME]
+    vars:
+      WAVS_INSTANCE: "{{index .MATCH 0}}"
+      OPERATOR_MNEMONIC:
+        sh: task backend:get-wavs-operator-mnemonic-{{.WAVS_INSTANCE}}
+      EVM_OPERATOR_ADDRESS:
+        sh: cast wallet address --mnemonic "{{.OPERATOR_MNEMONIC}}"
+      SERVICE_MANAGER_ADDRESS:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json" | jq -r '.service_manager_address'
+      STAKE_REGISTRY_ADDRESS:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json" | jq -r '.registry_address'
+      WAVS_PORT:
+        sh: task backend:get-wavs-operator-port-{{.WAVS_INSTANCE}}
+      WAVS_URL: "http://127.0.0.1:{{.WAVS_PORT}}"
+    cmds:
+      - echo "🚀 Setting signing key on service manager {{.SERVICE_MANAGER_ADDRESS}}..."
+      - >
+        cd packages/cli && cargo run operator-set-signing-key
+        --wavs-instance={{.WAVS_INSTANCE}}
+        --output-filename={{.FILENAME}}
+        --service-manager-address={{.SERVICE_MANAGER_ADDRESS}}
+        --stake-registry-address={{.STAKE_REGISTRY_ADDRESS}}
+        --evm-operator-address={{.EVM_OPERATOR_ADDRESS}}
+        --wavs-url={{.WAVS_URL}}
+        --weight={{.WEIGHT}}
+
+  ###################################################################
   ######################## SERVICE ##################################
   ###################################################################
 
@@ -252,6 +338,7 @@ tasks:
           COMPONENT_OPERATOR,
           COMPONENT_AGGREGATOR,
           FILENAME,
+          ACTIVATE,
         ]
     vars:
       IPFS_API_URL: "http://127.0.0.1:{{.IPFS_API_PORT}}"
@@ -270,6 +357,7 @@ tasks:
         --component-aggregator-cid-file "{{.COMPONENT_AGGREGATOR}}"
         --cron-schedule "{{.SERVICE_CRON_SCHEDULE}}"
         --aggregator-url {{.AGGREGATOR_URL}}
+        {{ if eq .ACTIVATE "true" }} --activate {{ end }}
 
   middleware-set-service-uri:
     deps: [assert-account-exists]
@@ -306,6 +394,9 @@ tasks:
     vars:
       OPERATORS_RANGE:
         sh: seq 1 {{.OPERATORS | default "1"}}
+      ADDR_FROM_FILE:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+      ADDR: "{{.ADDR | default .ADDR_FROM_FILE}}"
     cmds:
       - for: { var: OPERATORS_RANGE }
         task: operator-add-service-{{.ITEM}}-{{.ADDR}}
@@ -321,5 +412,30 @@ tasks:
       - echo "🚀 Adding service to operator {{.WAVS_INSTANCE}}..."
       - >
         cd packages/cli && cargo run operator-add-service
+        --wavs-url {{.WAVS_URL}}
+        --service-manager-address "{{.ADDR}}"
+
+  operator-delete-service:
+    vars:
+      OPERATORS_RANGE:
+        sh: seq 1 {{.OPERATORS | default "1"}}
+      ADDR_FROM_FILE:
+        sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+      ADDR: "{{.ADDR | default .ADDR_FROM_FILE}}"
+    cmds:
+      - for: { var: OPERATORS_RANGE }
+        task: operator-delete-service-{{.ITEM}}-{{.ADDR}}
+
+  operator-delete-service-*-*:
+    vars:
+      WAVS_INSTANCE: "{{index .MATCH 0}}"
+      ADDR: "{{index .MATCH 1}}"
+      WAVS_PORT:
+        sh: task backend:get-wavs-operator-port-{{.WAVS_INSTANCE}}
+      WAVS_URL: "http://127.0.0.1:{{.WAVS_PORT}}"
+    cmds:
+      - echo "Deleting service for operator {{.WAVS_INSTANCE}}..."
+      - >
+        cd packages/cli && cargo run operator-delete-service
         --wavs-url {{.WAVS_URL}}
         --service-manager-address "{{.ADDR}}"

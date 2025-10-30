@@ -33,8 +33,10 @@ impl CliContext {
             CliCommand::AssertAccountExists { args, .. } => args,
             CliCommand::AggregatorRegisterService { args, .. } => args,
             CliCommand::OperatorAddService { args, .. } => args,
+            CliCommand::OperatorDeleteService { args, .. } => args,
             CliCommand::TelegramSetWebhook { args, .. } => args,
             CliCommand::TelegramGetWebhook { args, .. } => args,
+            CliCommand::OperatorSetSigningKey { args, .. } => args,
         }
     }
 

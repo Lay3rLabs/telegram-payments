@@ -1,4 +1,4 @@
-use tg_contract_api::payments::msg::ComponentMsg;
+use tg_contract_api::payments::msg::{RegisterReceiveMsg, SendPaymentMsg, WavsPayload};
 use tg_utils::telegram::api::{
     bot::{TelegramBotCommand, TelegramWavsCommand},
     native::{TelegramMessage, TelegramUpdate},
@@ -10,24 +10,28 @@ pub fn parse_update(update: TelegramUpdate) -> Option<TelegramBotCommand> {
 
 pub fn map_command_to_contract(
     TelegramBotCommand { command, raw }: TelegramBotCommand,
-) -> Option<ComponentMsg> {
+) -> Option<WavsPayload> {
+    let from_handle = raw.from.username?;
+
     match command {
-        TelegramWavsCommand::Receive { address } => Some(ComponentMsg::Receive {
-            address: address.into(),
-            user_id: raw.from.id,
-            user_name: raw.from.username,
-        }),
+        TelegramWavsCommand::Receive { address } => {
+            Some(WavsPayload::Register(RegisterReceiveMsg {
+                message_id: raw.message_id,
+                chain_addr: address.to_string(),
+                tg_handle: from_handle,
+            }))
+        }
         TelegramWavsCommand::Send {
-            handle,
+            handle: to_handle,
             amount,
             denom,
-        } => Some(ComponentMsg::Send {
-            handle,
-            amount,
+        } => Some(WavsPayload::SendPayment(SendPaymentMsg {
+            message_id: raw.message_id,
+            from_tg: from_handle,
+            to_tg: to_handle,
+            amount: amount.into(),
             denom,
-            user_id: raw.from.id,
-            user_name: raw.from.username,
-        }),
+        })),
         _ => None,
     }
 }

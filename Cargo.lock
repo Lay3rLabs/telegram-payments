@@ -5035,6 +5035,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
+ "cosmwasm-std",
  "dotenvy",
  "layer-climb",
  "rand 0.9.2",
@@ -5128,6 +5129,7 @@ dependencies = [
  "anyhow",
  "axum",
  "clap",
+ "cosmwasm-std",
  "dotenvy",
  "layer-climb",
  "reqwest",

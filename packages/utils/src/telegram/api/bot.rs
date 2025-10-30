@@ -4,6 +4,7 @@ use crate::telegram::{
     api::native::{TelegramChatType, TelegramMessage},
     error::TelegramBotError,
 };
+use cosmwasm_std::Uint256;
 use layer_climb::prelude::CosmosAddr;
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +26,7 @@ pub enum TelegramWavsCommand {
     },
     Send {
         handle: String,
-        amount: u64,
+        amount: Uint256,
         denom: String,
     },
     Admin(TelegramWavsAdminCommand),
