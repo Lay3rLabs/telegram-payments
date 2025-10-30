@@ -12,17 +12,21 @@
   },
   "dependencies": {
     "@cosmjs/amino": "^0.36.2",
+    "@cosmjs/cosmwasm-stargate": "^0.37.0",
     "@cosmjs/crypto": "^0.36.2",
     "@cosmjs/encoding": "^0.36.2",
     "@cosmjs/proto-signing": "^0.36.2",
+    "@cosmjs/stargate": "^0.37.0",
     "@keplr-wallet/types": "^0.12.282",
     "@twa-dev/sdk": "^8.0.2",
     "@walletconnect/sign-client": "^2.22.4",
     "@walletconnect/types": "^2.22.4",
     "@walletconnect/utils": "^2.22.4",
     "buffer": "^6.0.3",
+    "cosmjs-types": "^0.10.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
     "@cosmwasm/ts-codegen": "^1.13.3",

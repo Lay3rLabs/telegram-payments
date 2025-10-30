@@ -98,10 +98,11 @@ class WalletConnectSigner implements OfflineDirectSigner {
     const address = addressParts[2];
     log(`Parsed address: ${address}`);
 
-    // Use a dummy pubkey - it's not needed for most operations
-    // and will be provided during signing if needed
+    // Use a valid dummy compressed secp256k1 pubkey (33 bytes starting with 0x02)
+    // The real pubkey will be provided by the wallet during signing
     const pubkey = new Uint8Array(33);
-    log('Using dummy pubkey (will be provided during signing)');
+    pubkey[0] = 0x02; // Valid compressed key marker
+    log('Using valid compressed dummy pubkey (real key provided during signing)');
 
     log(`Returning account: ${address}`);
     return [{

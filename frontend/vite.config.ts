@@ -5,20 +5,20 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ["9e7f1d5c6b16.ngrok-free.app"],
+    allowedHosts: ["49c9ea1666e3.ngrok-free.app"],
   },
   define: {
-    global: 'globalThis',
+    global: "globalThis",
   },
   resolve: {
     alias: {
-      buffer: 'buffer',
+      buffer: "buffer",
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
-        global: 'globalThis',
+        global: "globalThis",
       },
     },
   },

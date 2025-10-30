@@ -12,6 +12,9 @@ import { getSmartContractState } from 'interchainjs/cosmwasm/wasm/v1/query.rpc.f
 import { executeContract } from 'interchainjs/cosmwasm/wasm/v1/tx.rpc.func';
 import type { QuerySmartContractStateRequest, QuerySmartContractStateResponse } from 'interchainjs/cosmwasm/wasm/v1/query';
 import type { MsgExecuteContract } from 'interchainjs/cosmwasm/wasm/v1/tx';
+import { GasPrice } from '@cosmjs/stargate';
+import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import type { OfflineDirectSigner } from '@cosmjs/proto-signing';
 
 // Define types that might not be exported properly
 export type StdFee = {
@@ -118,13 +121,20 @@ export interface ICosmWasmClient {
 
 export interface ISigningCosmWasmClient extends ICosmWasmClient {
   execute(
-    sender: string, 
-    contractAddress: string, 
-    msg: any, 
-    fee?: number | StdFee | "auto", 
-    memo?: string, 
-    funds?: Coin[], 
+    sender: string,
+    contractAddress: string,
+    msg: any,
+    fee?: number | StdFee | "auto",
+    memo?: string,
+    funds?: Coin[],
     chainConfig?: ChainConfig
+  ): Promise<any>;
+
+  signAndBroadcast(
+    signerAddress: string,
+    messages: any[],
+    fee: number | StdFee | "auto",
+    memo?: string
   ): Promise<any>;
 }
 
@@ -157,6 +167,25 @@ export function getCosmWasmClient(rpcEndpoint: string): ICosmWasmClient {
 }
 
 export function getSigningCosmWasmClient(signingClient: DirectSigner, rpcEndpoint?: string): ISigningCosmWasmClient {
+  // Create a SigningCosmWasmClient wrapper that has signAndBroadcast
+  let cosmwasmClient: SigningCosmWasmClient | null = null;
+
+  const getCosmWasmClient = async (): Promise<SigningCosmWasmClient> => {
+    if (!cosmwasmClient) {
+      if (!rpcEndpoint) {
+        throw new Error('rpcEndpoint is required for signing operations');
+      }
+      // Set gas price for Neutron (0.025untrn is a reasonable default)
+      const gasPrice = GasPrice.fromString('0.025untrn');
+      cosmwasmClient = await SigningCosmWasmClient.connectWithSigner(
+        rpcEndpoint,
+        signingClient as unknown as OfflineDirectSigner,
+        { gasPrice }
+      );
+    }
+    return cosmwasmClient;
+  };
+
   return {
     queryContractSmart: async (contractAddr: string, query: any) => {
       if (!rpcEndpoint) {
@@ -168,6 +197,12 @@ export function getSigningCosmWasmClient(signingClient: DirectSigner, rpcEndpoin
       };
       const response: QuerySmartContractStateResponse = await getSmartContractState(rpcEndpoint, request);
       return fromUint8Array(response.data);
+    },
+
+    signAndBroadcast: async (signerAddress: string, messages: any[], fee: number | StdFee | "auto", memo?: string) => {
+      // Get the SigningCosmWasmClient which has signAndBroadcast
+      const client = await getCosmWasmClient();
+      return await client.signAndBroadcast(signerAddress, messages, fee as any, memo);
     },
     execute: async (
       sender: string, 

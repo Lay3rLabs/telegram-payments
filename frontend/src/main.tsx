@@ -41,8 +41,12 @@ try {
   const { StrictMode } = await import('react');
   const { createRoot } = await import('react-dom/client');
 
+  log('📦 Importing routing...');
+  const { BrowserRouter, Routes, Route } = await import('react-router-dom');
+
   log('📦 Importing components...');
   const { default: App } = await import('./App.tsx');
+  const { WalletConnect } = await import('./pages/WalletConnect.tsx');
   const { ErrorBoundary } = await import('./components/ErrorBoundary');
 
   log('📦 Importing styles...');
@@ -58,11 +62,16 @@ try {
   log('⚛️ Creating React root...');
   const root = createRoot(rootElement);
 
-  log('⚛️ Rendering app...');
+  log('⚛️ Rendering app with routing...');
   root.render(
     <StrictMode>
       <ErrorBoundary>
-        <App />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/connect" element={<WalletConnect />} />
+            <Route path="/" element={<App />} />
+          </Routes>
+        </BrowserRouter>
       </ErrorBoundary>
     </StrictMode>
   );

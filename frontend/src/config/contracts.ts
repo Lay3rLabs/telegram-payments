@@ -20,39 +20,32 @@ export interface NetworkConfig {
 
 // Network configurations
 export const NETWORKS: Record<string, NetworkConfig> = {
-  'neutron-1': {
-    chainId: 'neutron-1',
-    chainName: 'Neutron',
-    rpcEndpoint: 'https://neutron-rpc.publicnode.com:443',
-    restEndpoint: 'https://neutron-rest.publicnode.com:443',
-    prefix: 'neutron',
-    denom: 'untrn',
+  "neutron-1": {
+    chainId: "neutron-1",
+    chainName: "Neutron",
+    rpcEndpoint: "https://neutron-rpc.publicnode.com:443",
+    restEndpoint: "https://neutron-rest.publicnode.com:443",
+    prefix: "neutron",
+    denom: "untrn",
     decimals: 6,
   },
-  'pion-1': {
-    chainId: 'pion-1',
-    chainName: 'Neutron Testnet',
-    rpcEndpoint: 'https://rpc-palvus.pion-1.ntrn.tech',
-    restEndpoint: 'https://rest-palvus.pion-1.ntrn.tech',
-    prefix: 'neutron',
-    denom: 'untrn',
+  "pion-1": {
+    chainId: "pion-1",
+    chainName: "Neutron Testnet",
+    rpcEndpoint: "https://rpc-palvus.pion-1.ntrn.tech",
+    restEndpoint: "https://rest-palvus.pion-1.ntrn.tech",
+    prefix: "neutron",
+    denom: "untrn",
     decimals: 6,
   },
 };
 
 // Contract addresses by network
 export const CONTRACTS: Record<string, Record<string, ContractConfig>> = {
-  'neutron-1': {
+  "neutron-1": {
     payments: {
-      // TODO: Update with actual deployed contract address
-      address: 'neutron1...',
-      codeId: undefined,
-    },
-  },
-  'pion-1': {
-    payments: {
-      // TODO: Update with actual deployed contract address
-      address: 'neutron1...',
+      // TODO: Adjust to deployed contract address
+      address: "neutron13nj4jrt88cs594fcga4q60qfzk4akwm7k3wph4",
       codeId: undefined,
     },
   },
@@ -61,13 +54,13 @@ export const CONTRACTS: Record<string, Record<string, ContractConfig>> = {
 // Get current network (can be overridden via env var or local storage)
 export function getCurrentNetwork(): string {
   // Check localStorage first
-  const stored = localStorage.getItem('selected_network');
+  const stored = localStorage.getItem("selected_network");
   if (stored && NETWORKS[stored]) {
     return stored;
   }
 
   // Default to mainnet
-  return 'neutron-1';
+  return "neutron-1";
 }
 
 // Get network config
@@ -83,15 +76,20 @@ export function getNetworkConfig(networkId?: string): NetworkConfig {
 }
 
 // Get contract address
-export function getContractAddress(contractName: string, networkId?: string): string {
+export function getContractAddress(
+  contractName: string,
+  networkId?: string
+): string {
   const network = networkId || getCurrentNetwork();
   const contract = CONTRACTS[network]?.[contractName];
 
   if (!contract) {
-    throw new Error(`Contract ${contractName} not found for network ${network}`);
+    throw new Error(
+      `Contract ${contractName} not found for network ${network}`
+    );
   }
 
-  if (contract.address === 'neutron1...') {
+  if (contract.address === "neutron1...") {
     throw new Error(
       `Contract ${contractName} address not configured. Please update src/config/contracts.ts with the deployed contract address.`
     );
@@ -122,9 +120,11 @@ export function setContractAddress(
 
 // Load contract addresses from localStorage (for development)
 export function loadContractAddressesFromStorage(): void {
-  Object.keys(NETWORKS).forEach(network => {
-    Object.keys(CONTRACTS[network] || {}).forEach(contractName => {
-      const stored = localStorage.getItem(`contract_${network}_${contractName}`);
+  Object.keys(NETWORKS).forEach((network) => {
+    Object.keys(CONTRACTS[network] || {}).forEach((contractName) => {
+      const stored = localStorage.getItem(
+        `contract_${network}_${contractName}`
+      );
       if (stored) {
         CONTRACTS[network][contractName].address = stored;
       }
