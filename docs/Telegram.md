@@ -5,7 +5,7 @@ We want the following:
 1. A user can send messages which are received BOTH by our backend server (bot) as well as all operators
 2. The backend server (bot) uses webhooks for quick responses
 3. The backend server (bot) can send messages to users
-4. Operators can read messages from users
+4. Operators read messages from users by polling.
 
 ## Problems
 
