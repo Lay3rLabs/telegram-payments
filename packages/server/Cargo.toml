@@ -10,7 +10,8 @@ publish = false
 
 [dependencies]
 tg-contract-api = { workspace = true }
-tg-utils = { workspace = true, features = ["full"] }
+tg-utils = { workspace = true, features = ["binary"] }
+wavs-types = { workspace = true }
 layer-climb = { workspace = true}
 axum = { workspace = true }
 anyhow = { workspace = true }

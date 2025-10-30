@@ -28,7 +28,25 @@ pub enum TelegramWavsCommand {
         amount: u64,
         denom: String,
     },
+    Admin(TelegramWavsAdminCommand),
+    Service,
     Status,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum TelegramWavsAdminCommand {
+    SetService {
+        service_url: String,
+        admin_key: String,
+    },
+}
+
+impl TelegramWavsAdminCommand {
+    pub fn admin_key(&self) -> &str {
+        match self {
+            TelegramWavsAdminCommand::SetService { admin_key, .. } => admin_key,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq)]
@@ -39,6 +57,12 @@ pub enum TelegramWavsCommandPrefix {
     Receive,
     Send,
     Status,
+    Admin(TelegramWavsAdminCommandPrefix),
+    Service,
+}
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+pub enum TelegramWavsAdminCommandPrefix {
+    SetService,
 }
 
 impl TelegramWavsCommandPrefix {
@@ -50,6 +74,10 @@ impl TelegramWavsCommandPrefix {
             TelegramWavsCommandPrefix::Receive => "<address>",
             TelegramWavsCommandPrefix::Send => "<handle> <amount> <denom>",
             TelegramWavsCommandPrefix::Status => "",
+            TelegramWavsCommandPrefix::Admin(admin) => match admin {
+                TelegramWavsAdminCommandPrefix::SetService => "<service_url> <admin-key>",
+            },
+            TelegramWavsCommandPrefix::Service => "",
         }
     }
 }
@@ -65,6 +93,10 @@ impl FromStr for TelegramWavsCommandPrefix {
             "/receive" => Ok(TelegramWavsCommandPrefix::Receive),
             "/send" => Ok(TelegramWavsCommandPrefix::Send),
             "/status" => Ok(TelegramWavsCommandPrefix::Status),
+            "/admin set-service" => Ok(TelegramWavsCommandPrefix::Admin(
+                TelegramWavsAdminCommandPrefix::SetService,
+            )),
+            "/service" => Ok(TelegramWavsCommandPrefix::Service),
             _ => Err(TelegramBotError::UnknownCommand(s.to_string())),
         }
     }
@@ -79,6 +111,10 @@ impl std::fmt::Display for TelegramWavsCommandPrefix {
             TelegramWavsCommandPrefix::Receive => write!(f, "/receive"),
             TelegramWavsCommandPrefix::Send => write!(f, "/send"),
             TelegramWavsCommandPrefix::Status => write!(f, "/status"),
+            TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService) => {
+                write!(f, "/admin set-service")
+            }
+            TelegramWavsCommandPrefix::Service => write!(f, "/service"),
         }
     }
 }
@@ -103,7 +139,12 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
             Some(text) => {
                 let mut iter = text.split_whitespace();
                 let prefix = iter.next().ok_or(TelegramBotError::EmptyMessage)?;
-                let prefix = TelegramWavsCommandPrefix::from_str(prefix)?;
+                let prefix = if prefix == "/admin" {
+                    let next = iter.next().ok_or(TelegramBotError::EmptyMessage)?;
+                    TelegramWavsCommandPrefix::from_str(&format!("{} {}", prefix, next))?
+                } else {
+                    TelegramWavsCommandPrefix::from_str(prefix)?
+                };
 
                 (prefix, iter.map(|s| s.to_string()).collect::<Vec<_>>())
             }
@@ -115,6 +156,17 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
         match prefix {
             TelegramWavsCommandPrefix::Start => Ok(TelegramWavsCommand::Start),
             TelegramWavsCommandPrefix::Help => Ok(TelegramWavsCommand::Help),
+            TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService) => {
+                match &parts[..] {
+                    [service_url, admin_key] => Ok(TelegramWavsCommand::Admin(
+                        TelegramWavsAdminCommand::SetService {
+                            service_url: service_url.to_string(),
+                            admin_key: admin_key.to_string(),
+                        },
+                    )),
+                    _ => Err(TelegramBotError::InvalidCommandFormat { prefix }),
+                }
+            }
             TelegramWavsCommandPrefix::Send => match &parts[..] {
                 [handle, amount, denom] => Ok(TelegramWavsCommand::Send {
                     handle: handle.to_string(),
@@ -143,6 +195,7 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
                 },
                 _ => Err(TelegramBotError::NotGroupChat),
             },
+            TelegramWavsCommandPrefix::Service => Ok(TelegramWavsCommand::Service),
         }
     }
 }

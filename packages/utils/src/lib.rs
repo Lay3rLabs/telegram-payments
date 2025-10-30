@@ -4,7 +4,7 @@ pub mod addr;
 pub mod client;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "full")] {
+    if #[cfg(feature = "binary")] {
         mod binary;
         pub use binary::*;
     }
