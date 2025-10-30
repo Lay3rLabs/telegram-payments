@@ -78,9 +78,11 @@ A user of the service will interact with a group containing all of these bots. U
 
 However, there is one major problem:
 
-The Bot API disallows creating groups and adding people :(
+The Bot API disallows creating groups on-the-fly :(
 
 For the purpose of the hackathon, this means all users are in one group together, which is not the ideal experience. It also means that operator bots must be added manually by a human admin.
+
+Humans can join the group via an automatically generated invite link from the Messenger Bot, however
 
 ### Scaling for production
 
