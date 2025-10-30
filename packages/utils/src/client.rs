@@ -7,7 +7,9 @@ pub mod payments;
 #[cfg(feature = "multitest")]
 use cw_multi_test::{App, Executor};
 #[cfg(feature = "multitest")]
-use std::{cell::RefCell, rc::Rc};
+use std::sync::Arc;
+#[cfg(feature = "multitest")]
+type AppWrapper = Arc<std::sync::Mutex<App>>;
 
 use anyhow::Result;
 use layer_climb::prelude::*;
@@ -26,7 +28,7 @@ pub enum AnyQuerier {
     #[cfg(feature = "client-pool")]
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
-    MultiTest(Rc<RefCell<App>>),
+    MultiTest(AppWrapper),
 }
 
 impl From<QueryClient> for AnyQuerier {
@@ -43,8 +45,8 @@ impl From<layer_climb::pool::SigningClientPool> for AnyQuerier {
 }
 
 #[cfg(feature = "multitest")]
-impl From<Rc<RefCell<App>>> for AnyQuerier {
-    fn from(app: Rc<RefCell<App>>) -> AnyQuerier {
+impl From<AppWrapper> for AnyQuerier {
+    fn from(app: AppWrapper) -> AnyQuerier {
         AnyQuerier::MultiTest(app)
     }
 }
@@ -67,7 +69,8 @@ impl AnyQuerier {
             }
             #[cfg(feature = "multitest")]
             Self::MultiTest(app) => Ok(app
-                .borrow()
+                .lock()
+                .unwrap()
                 .wrap()
                 .query_wasm_smart(address.to_string(), msg)
                 .map_err(|e| anyhow!("{e:?}"))?),
@@ -83,7 +86,7 @@ pub enum AnyExecutor {
     ClimbPool(layer_climb::pool::SigningClientPool),
     #[cfg(feature = "multitest")]
     MultiTest {
-        app: Rc<RefCell<App>>,
+        app: AppWrapper,
         admin: cosmwasm_std::Addr,
     },
 }
@@ -102,8 +105,8 @@ impl From<layer_climb::pool::SigningClientPool> for AnyExecutor {
 }
 
 #[cfg(feature = "multitest")]
-impl From<(Rc<RefCell<App>>, cosmwasm_std::Addr)> for AnyExecutor {
-    fn from((app, admin): (Rc<RefCell<App>>, cosmwasm_std::Addr)) -> AnyExecutor {
+impl From<(AppWrapper, cosmwasm_std::Addr)> for AnyExecutor {
+    fn from((app, admin): (AppWrapper, cosmwasm_std::Addr)) -> AnyExecutor {
         AnyExecutor::MultiTest { app, admin }
     }
 }
@@ -148,7 +151,8 @@ impl AnyExecutor {
             }
             #[cfg(feature = "multitest")]
             Self::MultiTest { app, admin } => Ok(app
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .execute_contract(admin.clone(), address.into(), msg, funds)
                 .map(AnyTxResponse::MultiTest)
                 .map_err(|e| anyhow!("{e:?}"))?),

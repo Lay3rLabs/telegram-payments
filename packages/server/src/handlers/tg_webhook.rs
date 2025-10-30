@@ -1,14 +1,23 @@
+mod status;
+
 use crate::state::HttpState;
 use axum::{extract::State, http::Response, response::IntoResponse, Json};
 use layer_climb::prelude::CosmosAddr;
+use status::query_status;
 use tg_utils::telegram::{
     api::{
-        bot::{TelegramBotCommand, TelegramWavsCommand, TelegramWavsCommandPrefix},
-        native::{TelegramResponseMethod, TelegramWebHookRequest, TelegramWebHookResponse},
+        bot::{
+            TelegramBotCommand, TelegramWavsAdminCommand, TelegramWavsAdminCommandPrefix,
+            TelegramWavsCommand, TelegramWavsCommandPrefix,
+        },
+        native::{
+            TelegramResponseMethod, TelegramUser, TelegramWebHookRequest, TelegramWebHookResponse,
+        },
     },
-    error::TgResult,
+    error::{TelegramBotError, TgResult},
 };
 
+#[cfg(debug_assertions)]
 #[axum::debug_handler]
 pub async fn handle_tg_webhook(
     State(state): State<HttpState>,
@@ -81,8 +90,10 @@ enum CommandResponse {
     Start {
         link: String,
     },
-    // TODO - populate the actual data
-    Status,
+    Status {
+        address: Option<CosmosAddr>,
+        user: TelegramUser,
+    },
     Receive {
         address: CosmosAddr,
     },
@@ -94,7 +105,13 @@ enum CommandResponse {
     GroupId {
         group_id: i64,
     },
+    SetService {
+        service: wavs_types::Service,
+    },
     Help,
+    Service {
+        uri: String,
+    },
 }
 
 impl std::fmt::Display for CommandResponse {
@@ -103,9 +120,18 @@ impl std::fmt::Display for CommandResponse {
             CommandResponse::Start { link } => {
                 write!(f, "Welcome to the bot!\n\nJoin the group to start receiving and sending WAVS payments.\n\n{link}")
             }
-            CommandResponse::Status => {
-                write!(f, "Checking your current status, please be patient...")
-            }
+            CommandResponse::Status { address, user } => match address {
+                Some(addr) => write!(
+                    f,
+                    "Hello, {}! Your account is registered with address: {}",
+                    user.first_name, addr
+                ),
+                None => write!(
+                    f,
+                    "Hello, {}! Your account is not registered yet.",
+                    user.first_name
+                ),
+            },
             CommandResponse::Receive { address } => {
                 write!(f, "okay, you got it, registered {address}")
             }
@@ -119,39 +145,62 @@ impl std::fmt::Display for CommandResponse {
             CommandResponse::GroupId { group_id } => {
                 write!(f, "Group ID is {group_id}")
             }
-            CommandResponse::Help => write!(
-                f,
-                "*Available commands:*
+
+            CommandResponse::SetService { service } => {
+                write!(f, "```Service: {:#?}```", service)
+            }
+            CommandResponse::Service { uri } => {
+                write!(f, "Service: {}", uri)
+            }
+            CommandResponse::Help => {
+                let mut s = format!(
+                    "*Available commands:*
                 `{}` - Start interaction with the bot
                 `{}` - Show this help message
                 `{}` - Check if your account has been registered for receiving or sending payments
                 `{}` - Get the current group chat ID
                 `{} {}` - Register to receive WAVS payments at the specified address
                 `{} {}` - Register to send WAVS payments to the specified handle
+                `{}` - Get the current service information
+                `{} {}` - Set the service information (admin only)
                 ",
-                TelegramWavsCommandPrefix::Start,
-                TelegramWavsCommandPrefix::Help,
-                TelegramWavsCommandPrefix::Status,
-                TelegramWavsCommandPrefix::GroupId,
-                TelegramWavsCommandPrefix::Receive,
-                TelegramWavsCommandPrefix::Receive.format(),
-                TelegramWavsCommandPrefix::Send,
-                TelegramWavsCommandPrefix::Send.format(),
-            ),
+                    TelegramWavsCommandPrefix::Start,
+                    TelegramWavsCommandPrefix::Help,
+                    TelegramWavsCommandPrefix::Status,
+                    TelegramWavsCommandPrefix::GroupId,
+                    TelegramWavsCommandPrefix::Receive,
+                    TelegramWavsCommandPrefix::Receive.format(),
+                    TelegramWavsCommandPrefix::Send,
+                    TelegramWavsCommandPrefix::Send.format(),
+                    TelegramWavsCommandPrefix::Service,
+                    TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService),
+                    TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService)
+                        .format()
+                );
+
+                // for every new line, remove whitespace on the next line, but preservie the newline
+                s = s
+                    .lines()
+                    .map(|line| line.trim())
+                    .collect::<Vec<&str>>()
+                    .join("\n");
+
+                write!(f, "{}", s)
+            }
         }
     }
 }
 
 async fn handle_command(
     state: HttpState,
-    TelegramBotCommand { command, raw: _ }: TelegramBotCommand,
+    TelegramBotCommand { command, raw }: TelegramBotCommand,
 ) -> TgResult<CommandResponse> {
     match command.clone() {
         TelegramWavsCommand::Start => {
             let link = state.tg_bot().generate_group_invite_link().await?;
             Ok(CommandResponse::Start { link })
         }
-        TelegramWavsCommand::Status {} => Ok(CommandResponse::Status),
+        TelegramWavsCommand::Status {} => query_status(state, raw.from).await,
         TelegramWavsCommand::Receive { address, .. } => Ok(CommandResponse::Receive { address }),
         TelegramWavsCommand::Send {
             handle,
@@ -164,5 +213,37 @@ async fn handle_command(
         }),
         TelegramWavsCommand::GroupId { group_id } => Ok(CommandResponse::GroupId { group_id }),
         TelegramWavsCommand::Help {} => Ok(CommandResponse::Help),
+        TelegramWavsCommand::Admin(admin_command) => {
+            let expected_admin_key = std::env::var("SERVER_TELEGRAM_ADMIN_KEY").unwrap_or_default();
+
+            if expected_admin_key.is_empty() || admin_command.admin_key() != expected_admin_key {
+                return Err(tg_utils::telegram::error::TelegramBotError::Unauthorized.into());
+            }
+
+            match admin_command {
+                TelegramWavsAdminCommand::SetService {
+                    service_url,
+                    admin_key: _,
+                } => {
+                    let service = state
+                        .set_service(&service_url)
+                        .await
+                        .map_err(TelegramBotError::SetService)?;
+
+                    Ok(CommandResponse::SetService { service })
+                }
+            }
+        }
+        TelegramWavsCommand::Service => {
+            let uri = state
+                .get_service_uri()
+                .await
+                .map_err(TelegramBotError::GetService)?;
+
+            match uri {
+                None => Err(TelegramBotError::ServiceNotSet),
+                Some(uri) => Ok(CommandResponse::Service { uri }),
+            }
+        }
     }
 }

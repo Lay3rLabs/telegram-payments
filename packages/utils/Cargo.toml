@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-full = ["multitest", "client-pool", "wasi", "dep:tokio", "dep:toml", "reqwest"]
+binary = ["client-pool", "client", "telegram", "dep:tokio", "dep:toml", "reqwest"]
 wasi = ["client", "telegram", "wstd", "dep:wavs-wasi-utils"]
 multitest = ["dep:cw-multi-test"]
 client-pool = ["dep:deadpool"]

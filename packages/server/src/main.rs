@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
 
 // this is called from main and tests
 pub async fn make_router() -> anyhow::Result<axum::Router> {
-    let state = HttpState::new();
+    let state = HttpState::new().await;
 
     // public routes
     let router = axum::Router::new()

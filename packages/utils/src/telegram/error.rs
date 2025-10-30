@@ -22,4 +22,16 @@ pub enum TelegramBotError {
     NotGroupChat,
     #[error("Internal: {0}")]
     Internal(String),
+    #[error("Set service: {0:?}")]
+    SetService(anyhow::Error),
+    #[error("The service has not been set, contact an admin")]
+    ServiceNotSet,
+    #[error("The service does not have a payments contract, contact an admin")]
+    PaymentsContractNotSet,
+    #[error("Get service: {0:?}")]
+    GetService(anyhow::Error),
+    #[error("Error getting status: {0:?}")]
+    StatusAny(anyhow::Error),
+    #[error("User does not have a username set")]
+    NoUsername,
 }
