@@ -78,9 +78,9 @@ A user of the service will interact with a group containing all of these bots. U
 
 However, there is one major problem:
 
-The Bot API disallows creating groups and adding people: https://core.telegram.org/bots/api#making-requests-on-behalf-of-a-user
+The Bot API disallows creating groups and adding people :(
 
-For the purpose of the hackathon, this means all users are in one group together, which is not ideal. It also means that operator bots must be added manually by a human admin.
+For the purpose of the hackathon, this means all users are in one group together, which is not the ideal experience. It also means that operator bots must be added manually by a human admin.
 
 ### Scaling for production
 
@@ -90,7 +90,8 @@ This has several advantages:
 
 1. Each user can have their own private group with the bots, improving privacy and security.
 2. Bots can be added programmatically, improving usability.
+3. Groups can be created and deleted automatically
 
 However, this requires setting up a real user account tied to a personal phone number and is out of scope for the hackathon.
 
-At scale, due to the restrictions Telegram places on this approach, it may be necessary to have multiple user accounts (and phone numbers) to create groups for new users due to rate restrictions.
+At scale, due to the restrictions Telegram places on this approach, it may be necessary to have multiple user accounts (and phone numbers) to create groups for new users due to rate restrictions and/or coordinate with Telegram business offerings to ensure smooth operation.
