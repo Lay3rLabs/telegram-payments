@@ -73,8 +73,23 @@ In this case, we have different kinds of bots:
 
 A user of the service will interact with a group containing all of these bots. Users send messages to the group and the bots react accordingly:
 
-1. "Messenger Bot": handles cosmetic messaging such as welcome messages, giving instructions, etc.
+1. "Messenger Bot": handles cosmetic messaging such as welcome messages, giving instructions, private messaging, etc.
 2. "Operator Bots": read messages from users and process them (e.g. approve payments).
+
+#### The flow is as follows:
+
+1. A user messages the "Messenger Bot" in private chat (link to start can be provided via QR code)
+2. The "Messenger Bot" onboards the user via the mini-app, where they connect their wallet and send a dual-message transaction:
+  a. Authz grant for payments
+  b. Registration message to link their Telegram handle to their blockchain address
+3. The "Messenger Bot" creates an invite link to a group containing itself and all the operator bots
+4. The user joins the group via the invite link
+5. The user sends payment commands in the group (e.g. /send @recipient 10 NTRN)
+6. All operators read the messages in the group and process them accordingly.
+  a. This is via WAVS components and their individual bot keys
+  b. Ultimately signatures are aggregated and sent to the service handler contract
+  c. If a user is registered (i.e. in the group), payment is transferred, otherwise it's set aside for claim
+7. The operator bots also transfer any unclaimed funds to users when they join the group
 
 However, there is one major problem:
 
