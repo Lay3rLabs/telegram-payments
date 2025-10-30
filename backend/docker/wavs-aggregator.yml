@@ -6,6 +6,8 @@ services:
     stop_signal: SIGKILL
     environment:
       - WAVS_AGGREGATOR_COSMOS_CREDENTIAL=${WAVS_AGGREGATOR_COSMOS_CREDENTIAL:-}
+      - RUST_LOG=${WAVS_LOG_LEVEL:-}
+      - WAVS_AGGREGATOR_LOG_LEVEL=${WAVS_LOG_LEVEL:-}
     command:
       [
         "wavs-aggregator",

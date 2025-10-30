@@ -24,3 +24,4 @@ clap = { workspace = true }
 dotenvy = {workspace = true}
 thiserror = {workspace = true}
 reqwest = {workspace = true}
+cosmwasm-std = {workspace = true}

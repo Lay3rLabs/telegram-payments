@@ -1,9 +1,7 @@
 use anyhow::anyhow;
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tg_utils::{
-    client::payments::PaymentsQuerier,
     config::load_chain_configs_from_wavs,
-    path::repo_root,
     telegram::{
         api::native::TelegramMessage,
         error::TgResult,

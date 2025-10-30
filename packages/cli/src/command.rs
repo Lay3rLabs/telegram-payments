@@ -28,10 +28,11 @@ pub enum CliCommand {
 
         /// If AuthKind is User, then this is the user address
         /// and None means the CLI mnemonic address
+        /// Otherwise it is the service manager address and must be supplied
         #[arg(long)]
-        auth: Option<String>,
+        auth_address: Option<String>,
 
-        #[arg(long, default_value_t = AuthKind::User)]
+        #[arg(long, default_value_t = AuthKind::ServiceManager)]
         auth_kind: AuthKind,
 
         #[clap(flatten)]
@@ -77,6 +78,9 @@ pub enum CliCommand {
         #[arg(long)]
         ipfs_gateway_url: Url,
 
+        #[arg(long)]
+        activate: bool,
+
         #[clap(flatten)]
         args: CliArgs,
     },
@@ -108,6 +112,42 @@ pub enum CliCommand {
     OperatorAddService {
         #[arg(long)]
         service_manager_address: String,
+
+        #[arg(long)]
+        wavs_url: Url,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    OperatorDeleteService {
+        #[arg(long)]
+        service_manager_address: String,
+
+        #[arg(long)]
+        wavs_url: Url,
+
+        #[clap(flatten)]
+        args: CliArgs,
+    },
+    OperatorSetSigningKey {
+        /// The address of the service manager contract
+        #[arg(long)]
+        service_manager_address: String,
+
+        /// The stake registry address
+        #[arg(long)]
+        stake_registry_address: String,
+
+        /// The operator address (EVM address)
+        #[arg(long)]
+        evm_operator_address: String,
+
+        /// The weight for the signing key
+        #[arg(long)]
+        weight: String,
+
+        #[arg(long)]
+        wavs_instance: u32,
 
         #[arg(long)]
         wavs_url: Url,
@@ -197,7 +237,7 @@ impl AuthKind {
     pub fn as_str(&self) -> &str {
         match self {
             Self::User => "user",
-            Self::ServiceManager => "service-manager",
+            Self::ServiceManager => "service_manager",
         }
     }
 }

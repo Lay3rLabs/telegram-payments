@@ -5,12 +5,16 @@ mod output;
 
 use std::process::exit;
 
+use cosmwasm_std::Uint256;
+use layer_climb::prelude::EvmAddr;
+use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize};
 use tg_utils::{
     faucet, telegram::messenger::any_client::TelegramMessengerExt, tracing::tracing_init,
 };
 use wavs_types::{
-    ComponentSource, Service, ServiceManager, SignatureKind, Submit, Trigger, Workflow,
+    ComponentSource, GetSignerRequest, Service, ServiceManager, SignatureKind, SignerResponse,
+    Submit, Trigger, Workflow,
 };
 
 use crate::{
@@ -18,7 +22,8 @@ use crate::{
     context::CliContext,
     ipfs::IpfsFile,
     output::{
-        OutputComponentUpload, OutputContractInstantiate, OutputContractUpload, OutputServiceUpload,
+        OutputComponentUpload, OutputContractInstantiate, OutputContractUpload,
+        OutputOperatorSetSigningKey, OutputServiceUpload,
     },
 };
 
@@ -32,6 +37,123 @@ async fn main() {
     let ctx = CliContext::new().await;
 
     match ctx.command.clone() {
+        CliCommand::OperatorSetSigningKey {
+            service_manager_address,
+            evm_operator_address,
+            stake_registry_address,
+            wavs_instance,
+            weight,
+            wavs_url,
+            args,
+        } => {
+            let service_manager_address =
+                ctx.parse_address(&service_manager_address).await.unwrap();
+            let stake_registry_address = ctx.parse_address(&stake_registry_address).await.unwrap();
+
+            let service_manager = ServiceManager::Cosmos {
+                chain: ctx.args().chain.clone(),
+                address: service_manager_address.clone().try_into().unwrap(),
+            };
+
+            let body = serde_json::to_string(&GetSignerRequest { service_manager }).unwrap();
+
+            let url = wavs_url.join("services/signer").unwrap();
+            let SignerResponse::Secp256k1 {
+                evm_address: evm_signing_key_address,
+                hd_index: _,
+            } = reqwest::Client::new()
+                .post(url.clone())
+                .header("Content-Type", "application/json")
+                .body(body)
+                .send()
+                .await
+                .unwrap()
+                .json()
+                .await
+                .unwrap();
+
+            let client = ctx.signing_client().await.unwrap();
+
+            // Parse EVM addresses
+            let evm_operator_address: EvmAddr = evm_operator_address.parse().expect(&format!(
+                "Invalid operator EVM address '{}'",
+                evm_operator_address
+            ));
+
+            let evm_signing_key_address: EvmAddr =
+                evm_signing_key_address.parse().expect(&format!(
+                    "Invalid signing key EVM address '{}'",
+                    evm_signing_key_address
+                ));
+
+            // Parse weight as Uint256
+            let weight_uint: Uint256 = weight
+                .parse()
+                .unwrap_or_else(|e| panic!("Invalid weight '{}': {}", weight, e));
+
+            // Create the SetSigningKey message
+            // TODO: move this to middleware docker cli
+            let set_signing_key_msg = serde_json::json!({
+                "set_signing_key": {
+                    "operator": evm_operator_address.to_string(),
+                    "signing_key": evm_signing_key_address.to_string(),
+                    "weight": weight_uint.to_string()
+                }
+            });
+
+            let tx_resp = client
+                .contract_execute(
+                    &service_manager_address.into(),
+                    &set_signing_key_msg,
+                    vec![],
+                    None,
+                )
+                .await
+                .unwrap();
+
+            let service_manager_tx_hash = tx_resp.txhash;
+
+            // Create the SetOperatorDetails message
+            // TODO: move this to middleware docker cli
+            let set_operator_details_msg = serde_json::json!({
+                "set_operator_details": {
+                    "operator": evm_operator_address.to_string(),
+                    "signing_key": evm_signing_key_address.to_string(),
+                    "weight": weight_uint.to_string()
+                }
+            });
+
+            let tx_resp = client
+                .contract_execute(
+                    &stake_registry_address,
+                    &set_operator_details_msg,
+                    vec![],
+                    None,
+                )
+                .await
+                .unwrap();
+
+            let stake_registry_tx_hash = tx_resp.txhash;
+
+            let mut output = args.output();
+
+            output.output_filename =
+                if let Some((name, ext)) = output.output_filename.rsplit_once('.') {
+                    format!("{name}-{wavs_instance}.{ext}")
+                } else {
+                    format!("{}-{wavs_instance}", output.output_filename)
+                };
+
+            output
+                .write(OutputOperatorSetSigningKey {
+                    service_manager_tx_hash,
+                    stake_registry_tx_hash,
+                    evm_operator_address,
+                    evm_signing_key_address,
+                })
+                .await
+                .unwrap();
+        }
         CliCommand::TelegramGetWebhook { args: _ } => {
             let webhook_info = ctx.tg_messenger().get_webhook().await.unwrap();
 
@@ -90,7 +212,7 @@ async fn main() {
         }
         CliCommand::InstantiatePayments {
             allowed_denoms,
-            auth,
+            auth_address,
             auth_kind,
             args,
             code_id,
@@ -99,14 +221,14 @@ async fn main() {
 
             let auth = match auth_kind {
                 AuthKind::ServiceManager => {
-                    tg_contract_api::payments::msg::Auth::ServiceManager(match auth {
+                    tg_contract_api::payments::msg::Auth::ServiceManager(match auth_address {
                         Some(addr) => ctx.parse_address(&addr).await.unwrap().to_string(),
                         None => {
                             panic!("Service manager auth requires an address to be provided")
                         }
                     })
                 }
-                AuthKind::User => tg_contract_api::payments::msg::Auth::Admin(match auth {
+                AuthKind::User => tg_contract_api::payments::msg::Auth::Admin(match auth_address {
                     Some(addr) => ctx.parse_address(&addr).await.unwrap().to_string(),
                     None => ctx.wallet_addr().await.unwrap().to_string(),
                 }),
@@ -214,8 +336,9 @@ async fn main() {
             cron_schedule,
             middleware_instantiation_file,
             aggregator_url,
+            activate,
         } => {
-            let output_directory = args.output().directory;
+            let output_directory = args.output().directory();
 
             let contract_payments_instantiation_file =
                 output_directory.join(contract_payments_instantiation_file);
@@ -224,6 +347,19 @@ async fn main() {
                 output_directory.join(component_aggregator_cid_file);
             let middleware_instantiation_file =
                 output_directory.join(middleware_instantiation_file);
+
+            fn strip_trailing_slash(url: &Url) -> String {
+                let s = url.as_str();
+                if s.ends_with('/') {
+                    s[..s.len() - 1].to_string()
+                } else {
+                    s.to_string()
+                }
+            }
+
+            let ipfs_api_url = strip_trailing_slash(&ipfs_api_url);
+            let ipfs_gateway_url = strip_trailing_slash(&ipfs_gateway_url);
+            let aggregator_url = strip_trailing_slash(&aggregator_url);
 
             async fn read_and_decode<T: DeserializeOwned>(path: std::path::PathBuf) -> T {
                 match tokio::fs::read_to_string(&path).await {
@@ -307,7 +443,7 @@ async fn main() {
             };
 
             let submit = Submit::Aggregator {
-                url: aggregator_url.to_string(),
+                url: aggregator_url,
                 component: Box::new(aggregator_component),
                 signature_kind: SignatureKind::evm_default(),
             };
@@ -323,7 +459,11 @@ async fn main() {
                 workflows: [("workflow-1".parse().unwrap(), workflow)]
                     .into_iter()
                     .collect(),
-                status: wavs_types::ServiceStatus::Active,
+                status: if activate {
+                    wavs_types::ServiceStatus::Active
+                } else {
+                    wavs_types::ServiceStatus::Paused
+                },
                 manager: ServiceManager::Cosmos {
                     chain: args.chain.clone(),
                     address: middleware_instantiation
@@ -403,6 +543,28 @@ async fn main() {
 
             reqwest::Client::new()
                 .post(wavs_url.join("services").unwrap())
+                .json(&req)
+                .send()
+                .await
+                .unwrap()
+                .error_for_status()
+                .unwrap();
+        }
+
+        CliCommand::OperatorDeleteService {
+            args,
+            service_manager_address,
+            wavs_url,
+        } => {
+            let req = wavs_types::DeleteServicesRequest {
+                service_managers: vec![ServiceManager::Cosmos {
+                    chain: args.chain,
+                    address: service_manager_address.parse().unwrap(),
+                }],
+            };
+
+            reqwest::Client::new()
+                .delete(wavs_url.join("services").unwrap())
                 .json(&req)
                 .send()
                 .await

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // Work-in-progress, but big picture ideas:
 // handlers return `HttpResult`
 // this allows us to use `?` in handlers with anything anyhow-friendly
