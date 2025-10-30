@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import WebApp from '@twa-dev/sdk';
-import { hapticImpact, hapticNotification, showAlert } from '../utils/telegram';
+import { hapticImpact, hapticNotification, showAlert, showConfirm } from '../utils/telegram';
 import { WalletManager } from './WalletManager';
 import { AccountCreation } from './AccountCreation';
 import { useSigningClient } from '../hooks/useSigningClient';
@@ -22,6 +22,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [spendingLimit, setSpendingLimit] = useState('100'); // Default 100 NTRN
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const { client: signingClient, address: signerAddress } = useSigningClient();
 
   useEffect(() => {
@@ -42,14 +43,21 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   // Auto-proceed from wallet-connect to set-limit once wallet is ready
   useEffect(() => {
-    if (currentStep === 'wallet-connect' && signingClient && account) {
+    if (currentStep === 'wallet-connect' && signingClient && signerAddress && account && !isResetting) {
       log('Wallet is ready, auto-proceeding to set-limit step');
-      // Small delay to let user see the "Wallet Ready" message
-      setTimeout(() => {
-        setCurrentStep('set-limit');
-      }, 1000);
+      log(`Signing client: ${!!signingClient}, Address: ${signerAddress}, Account: ${account.address}`);
+
+      // Verify address matches account
+      if (signerAddress === account.address) {
+        // Longer delay to ensure wallet is fully settled
+        setTimeout(() => {
+          setCurrentStep('set-limit');
+        }, 1500);
+      } else {
+        log(`Address mismatch: ${signerAddress} vs ${account.address}`, 'warn');
+      }
     }
-  }, [currentStep, signingClient, account]);
+  }, [currentStep, signingClient, signerAddress, account, isResetting]);
 
   const handleNext = () => {
     hapticImpact('light');
@@ -91,11 +99,48 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const handleAccountCreated = async () => {
     const newAccount = getStoredAccount();
     setAccount(newAccount);
+
+    // Clear resetting flag if it was set
+    setIsResetting(false);
+
     setCurrentStep('wallet-connect');
 
     // Trigger wallet reinitialization by calling reinitialize from the hook
     // This ensures the signing client picks up the newly created wallet
-    log('Account created, reinitializing wallet...');
+    log(`Account created: ${newAccount?.address}`);
+    log('Moving to wallet-connect step...');
+  };
+
+  const handleResetWallet = () => {
+    showConfirm(
+      'Are you sure you want to connect a different wallet? Your current wallet settings will be cleared.',
+      (confirmed) => {
+        if (confirmed) {
+          hapticImpact('medium');
+          log('Resetting wallet settings...');
+
+          setIsResetting(true);
+
+          // Clear all stored data
+          localStorage.removeItem('telegram_payments_account');
+          localStorage.removeItem('telegram_payments_mnemonic');
+          localStorage.removeItem('telegram_payments_wallet_type');
+          localStorage.removeItem('telegram_payments_registered');
+
+          // Reset state
+          setAccount(null);
+
+          // Go back to account creation step
+          setCurrentStep('create-account');
+
+          // Allow auto-proceed again after reset is complete
+          setTimeout(() => {
+            setIsResetting(false);
+            log('Wallet settings cleared. Ready to connect new wallet.');
+          }, 500);
+        }
+      }
+    );
   };
 
   const handleRegister = async () => {
@@ -231,10 +276,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <WalletManager />
 
-            {signingClient && (
-              <button className="primary-button" onClick={handleNext}>
-                Continue
-              </button>
+            {signingClient && signerAddress && (
+              <div style={{ marginTop: '16px' }}>
+                <p style={{ color: 'var(--tg-theme-hint-color)', fontSize: '14px', marginBottom: '12px' }}>
+                  ✅ Wallet connected: {signerAddress.substring(0, 12)}...
+                </p>
+                <button className="primary-button" onClick={handleNext}>
+                  Continue
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -274,6 +324,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <button className="primary-button" onClick={handleNext}>
               Continue
+            </button>
+
+            <button
+              className="secondary-button"
+              onClick={handleResetWallet}
+              style={{ marginTop: '12px' }}
+            >
+              Connect Different Wallet
             </button>
           </div>
         )}

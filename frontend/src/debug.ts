@@ -4,8 +4,8 @@
  */
 
 export function createDebugPanel() {
-  const panel = document.createElement('div');
-  panel.id = 'debug-panel';
+  const panel = document.createElement("div");
+  panel.id = "debug-panel";
   panel.style.cssText = `
     position: fixed;
     top: 10px;
@@ -26,28 +26,29 @@ export function createDebugPanel() {
   return panel;
 }
 
-export function log(message: string, type: 'info' | 'error' | 'warn' = 'info') {
+export function log(message: string, type: "info" | "error" | "warn" = "info") {
   console.log(`[${type}]`, message);
 
-  let panel = document.getElementById('debug-panel');
-  if (!panel) {
-    panel = createDebugPanel();
-  }
+  // Comment back in if you want to see debug panel
+  // let panel = document.getElementById('debug-panel');
+  // if (!panel) {
+  //  panel = createDebugPanel();
+  // }
 
-  const color = type === 'error' ? '#f00' : type === 'warn' ? '#ff0' : '#0f0';
+  const color = type === "error" ? "#f00" : type === "warn" ? "#ff0" : "#0f0";
   const timestamp = new Date().toLocaleTimeString();
 
-  const line = document.createElement('div');
+  const line = document.createElement("div");
   line.style.cssText = `color: ${color}; margin-bottom: 4px;`;
   line.textContent = `[${timestamp}] ${message}`;
-  panel.appendChild(line);
+  // panel.appendChild(line);
 
   // Auto scroll to bottom
-  panel.scrollTop = panel.scrollHeight;
+  // panel.scrollTop = panel.scrollHeight;
 }
 
 export function clearDebug() {
-  const panel = document.getElementById('debug-panel');
+  const panel = document.getElementById("debug-panel");
   if (panel) {
     panel.remove();
   }
