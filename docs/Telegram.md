@@ -3,17 +3,23 @@
 We want the following:
 
 1. A user can send messages which are received BOTH by our backend server (bot) as well as all operators
-2. THe backend server (bot) uses webhooks for quick responses
+2. The backend server (bot) uses webhooks for quick responses
 3. The backend server (bot) can send messages to users
-4. The aggregator can send messages to users
-
-For this prototypes, we can share API keys among multiple actors. Later, ideally more fine grained.
+4. Operators read messages from users by polling.
 
 ## Problems
 
+### API Keys are always admin
+
+Telegram does not allow granular permissions for bots. Each bot has one API key, and that key is always admin.
+
+Sharing one API key among multiple machines allows them all to do anything such as delete messages, ban users, change bot settings, etc.
+
+We accept this risk for the purpose of a hackathon prototype, but the design should allow for more granular permissions in the future.
+
 ### WebHooks not working
 
-First approach was to share the same Telegram API key with all machines. It hit a few issues:
+Even if we share the same Telegram API key with all machines, we have a few issues:
 
 https://core.telegram.org/bots/api#getupdates
 
@@ -27,12 +33,27 @@ Notes
 ```
 
 So, if we want to use the webhook, we cannot use the same API key to poll.
-That said, it does seem that many different machines can poll with the same API key, they just need to manage offsets well
+
+### Long Polling not working
+
+Even if we remove the webhook from the backend server and use long-polling everywhere, we have another issue:
+
+https://core.telegram.org/bots/api#getupdates
+
+```
+An update is considered confirmed as soon as getUpdates is called with an offset higher than its update_id.
+[...]
+All previous updates will be forgotten.
+```
+
+So if we have multiple machines using the same API key to poll, they will step on each other's toes, and miss messages.
+
 
 ### Relay in a Group
 
 We thought to make multiple telegram bots (one for our backend server and one for the operators), and have them relay messages to each other.
-However, this is also not possible. (As well as being a potentail security issue)
+
+However, this is also not possible. (As well as being a major security issue since the server can manipulate messages)
 
 https://core.telegram.org/bots/faq#why-doesn-39t-my-bot-see-messages-from-other-bots
 
@@ -41,34 +62,66 @@ Why doesn't my bot see messages from other bots?
 Bots talking to each other could potentially get stuck in unwelcome loops. To avoid this, we decided that bots will not be able to see messages from other bots regardless of mode.
 ```
 
-## Proposed Solutions
-
-### Long Polling
-
-If we have just one Telegram Bot account and one API key shared with all, we can use long polling to receive updates.
-We just remove requirement 2, and have the backend server also use long polling for this.
-And we stay close to the original design
+## Proposed Solution
 
 ### Payment Group
 
-In this case, we have one API key for the backend server (read-write) and aggregator (write-only). We have a second TG bot and API key shared among all operators for reading. THis bot should be mute, or at least have a funny name, so no one wants to send messages from it. Let's call these "Payment Bot" and "Operator Bot"
+In this case, we have different kinds of bots:
 
-A user of the service, will interact with a group containing them and both bots. The "Payment Bot" writing to them, and the "Operator Bot" allowing all operators to listen in.
+1. "Messenger Bot": This is a single bot the powered by webhooks, deals with cosmetic messaging only. It requires specialized software and runs on a traditional server.
+2. "Operator Bots": These aren't really bots, rather they are keys operators use to read messages only. Each operator has their own bot key.
 
-How do we create this easily? Plan:
+A user of the service will interact with a group containing all of these bots. Users send messages to the group and the bots react accordingly:
 
-1. User starts a chat with the Payment Bot (/start)
-2. Payment Bot creates a group and invites the Operator Bot
-3. Payment Bot sends a link to the user to join the group
-4. User sends commands to this group.
+1. "Messenger Bot": handles cosmetic messaging such as welcome messages, giving instructions, private messaging, etc.
+2. "Operator Bots": read messages from users and process them (e.g. approve payments).
 
-Questions:
+#### The flow is as follows:
 
-1. Can a bot create a group and add people?
-2. Can we embed mini-apps to a group? Or only in the direct chat?
+Receive Flow:
 
-## Plan
+1. A user messages the "Messenger Bot" in private chat (link to start can be provided via QR code)
+2. The "Messenger Bot" creates an invite link to a group containing itself and all the operator bots
+3. The user joins the group via the invite link
+4. The "Messenger Bot" greets the user in the group, asking them to type `/receive <addr>`
+5. User onboards with `/receive` which is processed by the "Operator Bots" (See payment flow step 2)
+6. The operator bots also transfer any unclaimed funds to users when they enter receive (happens automatically in the CW contract)
 
-I think the "Payment Group" is the most secure yet practical solution for scaling out later. However, it is not the most user-friendly, nor is it clear if it will work or hit another Telegram API issue.
+Funding Flow:
 
-For the Hackathon, let's just use Long Polling everywhere and see if that works.
+1. "Messenger Bot" prompts the user with a link for the mini-app funding registration. Something like `https://t.me/botusername?startapp` from [Mini App Docs](https://core.telegram.org/bots/webapps#launching-the-main-mini-app)
+2. The "Messenger Bot" onboards the user via the mini-app, where they connect their wallet and send a dual-message transaction:
+  a. Authz grant for payments
+  b. Registration message to link their Telegram handle to their blockchain address
+
+Payment Flow:
+
+1. The user sends payment commands in the group (e.g. /send @recipient 10 NTRN)
+2. All operators read the messages in the group and process them accordingly.
+  a. This is via WAVS components and their individual bot keys
+  b. Ultimately signatures are aggregated and sent to the service handler contract
+  c. If a user is registered (i.e. in the group), payment is transferred, otherwise it's set aside for claim
+
+**Questions**: Can we use command menus like /help in the group chat? Do you need to mention the bot? Does the bot read everything? If I start typing `/s` do I get inline help like in the DM chat?
+
+However, there is one major problem:
+
+The Bot API disallows creating groups on-the-fly :(
+
+For the purpose of the hackathon, this means all users are in one group together, which is not the ideal experience. It also means that operator bots must be added manually by a human admin.
+
+Humans can join the group via an automatically generated invite link from the Messenger Bot, however
+
+### Scaling for production
+
+In production, the `MTProto`/`grammers` APIs can be used to create groups and add people programmatically.
+
+This has several advantages:
+
+1. Each user can have their own private group with the bots, improving privacy and security.
+2. Bots can be added programmatically, improving usability.
+3. Groups can be created and deleted automatically
+
+However, this requires setting up a real user account tied to a personal phone number and is out of scope for the hackathon.
+
+At scale, due to the restrictions Telegram places on this approach, it may be necessary to have multiple user accounts (and phone numbers) to create groups for new users due to rate restrictions and/or coordinate with Telegram business offerings to ensure smooth operation.
