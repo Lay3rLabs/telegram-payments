@@ -1,8 +1,10 @@
 mod args;
 mod error;
 
+use std::collections::HashMap;
+
 use tg_utils::telegram::{
-    api::{TelegramBotCommand, TelegramMessage},
+    api::{next_state, MessageData, TGChatState, TelegramBotCommand, TelegramMessage},
     error::TgResult,
     messenger::{any_client::TelegramMessengerExt, reqwest_client::TelegramMessenger},
 };
@@ -24,6 +26,10 @@ async fn main() -> anyhow::Result<()> {
 
     let mut offset = None;
 
+    // Map from (user_id, chat_id) to chat state
+    let mut kvstore: HashMap<(i64, i64), TGChatState> = HashMap::new();
+    let default_state = TGChatState::Wait;
+
     loop {
         println!("Waiting for updates");
         // Long poll for 10 seconds, only pick up one message at a time
@@ -34,15 +40,30 @@ async fn main() -> anyhow::Result<()> {
                 for update in updates {
                     offset = Some(update.update_id + 1);
                     if let Some(msg) = update.message {
-                        let chat = msg.chat.id;
-                        match TelegramBotCommand::try_from(&msg) {
-                            Ok(command) => {
-                                handle_command(&messenger, chat, command).await?;
-                            }
-                            Err(e) => {
-                                messenger
-                                    .send_message(chat, &format!("Error handling command: {}", e))
-                                    .await?;
+                        let msg_data = MessageData::parse(&msg);
+                        if let Some(payload) = msg_data.text {
+                            let key = (msg_data.user_id, msg_data.chat_id);
+                            let state = kvstore.get(&key).unwrap_or(&default_state);
+
+                            match next_state(state, &payload) {
+                                Ok((new_state, command)) => {
+                                    if let Some(prompt) = new_state.prompt() {
+                                        messenger.send_message(msg_data.chat_id, &prompt).await?;
+                                    }
+                                    kvstore.insert(key, new_state);
+                                    if let Some(command) = command {
+                                        handle_command(&messenger, msg_data.chat_id, command)
+                                            .await?;
+                                    }
+                                }
+                                Err(e) => {
+                                    messenger
+                                        .send_message(
+                                            msg_data.chat_id,
+                                            &format!("Error handling command: {}", e),
+                                        )
+                                        .await?;
+                                }
                             }
                         }
                     }
@@ -66,8 +87,8 @@ async fn handle_command(
             tg_utils::telegram::api::TelegramWavsCommand::Receive { address, .. } => {
                 format!("okay, you got it, registered {address}")
             }
-            tg_utils::telegram::api::TelegramWavsCommand::Send { handle, amount, .. } => {
-                format!("okay, you got it, sending {amount} to {handle}")
+            tg_utils::telegram::api::TelegramWavsCommand::Send { handle, amount, denom } => {
+                format!("okay, you got it, sending {amount} {denom} to {handle}")
             }
             tg_utils::telegram::api::TelegramWavsCommand::Help {} => {
                 r#"*Available commands:*
