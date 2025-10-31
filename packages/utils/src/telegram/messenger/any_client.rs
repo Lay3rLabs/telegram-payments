@@ -89,6 +89,30 @@ pub trait TelegramMessengerExt {
         }
     }
 
+    async fn send_miniapp_button(
+        &self,
+        chat_id: i64,
+        label: &str,
+        url: &str,
+    ) -> TgResult<TelegramMessage> {
+        let mut params = HashMap::new();
+        params.insert("chat_id".to_string(), chat_id.to_string());
+        params.insert("text".to_string(), label.to_string());
+        let keyboard = serde_json::json!({
+            "inline_keyboard": [[
+                {
+                    "text": "Open Mini App",
+                    "web_app": {
+                        "url": url
+                    }
+                }
+            ]]
+        });
+        params.insert("reply_markup".to_string(), keyboard.to_string());
+
+        self._make_request_params("sendMessage", params).await
+    }
+
     async fn send_message(&self, chat_id: i64, text: &str) -> TgResult<TelegramMessage> {
         let mut params = HashMap::new();
         params.insert("chat_id".to_string(), chat_id.to_string());

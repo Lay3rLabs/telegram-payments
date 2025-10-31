@@ -17,6 +17,12 @@ pub struct HttpState {
     chain_configs: ChainConfigs,
     service: Arc<std::sync::Mutex<Option<wavs_types::Service>>>,
     query_clients: Arc<std::sync::Mutex<HashMap<ChainKey, QueryClient>>>,
+    user_sessions: Arc<std::sync::Mutex<HashMap<i64, InitialTelegramSession>>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct InitialTelegramSession {
+    pub message: TelegramMessage,
 }
 
 impl HttpState {
@@ -29,6 +35,7 @@ impl HttpState {
             chain_configs,
             service: Arc::new(std::sync::Mutex::new(None)),
             query_clients: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            user_sessions: Arc::new(std::sync::Mutex::new(HashMap::new())),
         }
     }
 
@@ -44,6 +51,14 @@ impl HttpState {
         }
 
         TelegramBot::new(bot_token, group_id.parse().expect("Invalid group id"))
+    }
+
+    pub fn set_user_session(&self, user_id: i64, session: InitialTelegramSession) {
+        self.user_sessions.lock().unwrap().insert(user_id, session);
+    }
+
+    pub fn get_user_session(&self, user_id: i64) -> Option<InitialTelegramSession> {
+        self.user_sessions.lock().unwrap().get(&user_id).cloned()
     }
 
     pub async fn set_service(&self, url: &String) -> anyhow::Result<wavs_types::Service> {
@@ -185,6 +200,17 @@ impl TelegramBot {
     pub async fn generate_group_invite_link(&self) -> TgResult<String> {
         self.messenger
             .generate_group_invite_link(self.group_id)
+            .await
+    }
+
+    pub async fn send_miniapp_button(
+        &self,
+        user_id: i64,
+        label: &str,
+        url: &str,
+    ) -> TgResult<TelegramMessage> {
+        self.messenger
+            .send_miniapp_button(user_id, label, url)
             .await
     }
 }

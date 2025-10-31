@@ -18,6 +18,7 @@ pub struct TelegramBotCommand {
 pub enum TelegramWavsCommand {
     Start,
     Help,
+    Connect,
     GroupId {
         group_id: i64,
     },
@@ -57,6 +58,7 @@ pub enum TelegramWavsCommandPrefix {
     GroupId,
     Receive,
     Send,
+    Connect,
     Status,
     Admin(TelegramWavsAdminCommandPrefix),
     Service,
@@ -75,6 +77,7 @@ impl TelegramWavsCommandPrefix {
             TelegramWavsCommandPrefix::Receive => "<address>",
             TelegramWavsCommandPrefix::Send => "<handle> <amount> <denom>",
             TelegramWavsCommandPrefix::Status => "",
+            TelegramWavsCommandPrefix::Connect => "",
             TelegramWavsCommandPrefix::Admin(admin) => match admin {
                 TelegramWavsAdminCommandPrefix::SetService => "<service_url> <admin-key>",
             },
@@ -94,6 +97,7 @@ impl FromStr for TelegramWavsCommandPrefix {
             "/receive" => Ok(TelegramWavsCommandPrefix::Receive),
             "/send" => Ok(TelegramWavsCommandPrefix::Send),
             "/status" => Ok(TelegramWavsCommandPrefix::Status),
+            "/connect" => Ok(TelegramWavsCommandPrefix::Connect),
             "/admin set-service" => Ok(TelegramWavsCommandPrefix::Admin(
                 TelegramWavsAdminCommandPrefix::SetService,
             )),
@@ -112,6 +116,7 @@ impl std::fmt::Display for TelegramWavsCommandPrefix {
             TelegramWavsCommandPrefix::Receive => write!(f, "/receive"),
             TelegramWavsCommandPrefix::Send => write!(f, "/send"),
             TelegramWavsCommandPrefix::Status => write!(f, "/status"),
+            TelegramWavsCommandPrefix::Connect => write!(f, "/connect"),
             TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService) => {
                 write!(f, "/admin set-service")
             }
@@ -157,6 +162,7 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
         match prefix {
             TelegramWavsCommandPrefix::Start => Ok(TelegramWavsCommand::Start),
             TelegramWavsCommandPrefix::Help => Ok(TelegramWavsCommand::Help),
+            TelegramWavsCommandPrefix::Connect => Ok(TelegramWavsCommand::Connect),
             TelegramWavsCommandPrefix::Admin(TelegramWavsAdminCommandPrefix::SetService) => {
                 match &parts[..] {
                     [service_url, admin_key] => Ok(TelegramWavsCommand::Admin(

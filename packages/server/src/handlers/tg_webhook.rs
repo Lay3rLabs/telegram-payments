@@ -1,6 +1,6 @@
 mod status;
 
-use crate::state::HttpState;
+use crate::state::{HttpState, InitialTelegramSession};
 use axum::{extract::State, http::Response, response::IntoResponse, Json};
 use cosmwasm_std::Uint256;
 use layer_climb::prelude::CosmosAddr;
@@ -72,7 +72,12 @@ pub async fn handle_tg_webhook(
     };
 
     match response {
-        Ok(resp) => Json(TelegramWebHookResponse::new(chat_id, resp.to_string())).into_response(),
+        Ok(resp) => match resp {
+            Some(resp) => {
+                Json(TelegramWebHookResponse::new(chat_id, resp.to_string())).into_response()
+            }
+            None => Response::new(().into()),
+        },
         Err(err) => {
             tracing::warn!("{err:?}");
 
@@ -160,6 +165,7 @@ impl std::fmt::Display for CommandResponse {
                 let mut s = format!(
                     "*Available commands:*
                 `{}` - Start interaction with the bot
+                `{}` - Connect your wallet via miniapp
                 `{}` - Show this help message
                 `{}` - Check if your account has been registered for receiving or sending payments
                 `{}` - Get the current group chat ID
@@ -169,6 +175,7 @@ impl std::fmt::Display for CommandResponse {
                 `{} {}` - Set the service information (admin only)
                 ",
                     TelegramWavsCommandPrefix::Start,
+                    TelegramWavsCommandPrefix::Connect,
                     TelegramWavsCommandPrefix::Help,
                     TelegramWavsCommandPrefix::Status,
                     TelegramWavsCommandPrefix::GroupId,
@@ -198,25 +205,64 @@ impl std::fmt::Display for CommandResponse {
 async fn handle_command(
     state: HttpState,
     TelegramBotCommand { command, raw }: TelegramBotCommand,
-) -> TgResult<CommandResponse> {
+) -> TgResult<Option<CommandResponse>> {
     match command.clone() {
         TelegramWavsCommand::Start => {
+            state.set_user_session(
+                raw.from.id,
+                InitialTelegramSession {
+                    message: raw.clone(),
+                },
+            );
             let link = state.tg_bot().generate_group_invite_link().await?;
-            Ok(CommandResponse::Start { link })
+            Ok(Some(CommandResponse::Start { link }))
         }
-        TelegramWavsCommand::Status {} => query_status(state, raw.from).await,
-        TelegramWavsCommand::Receive { address, .. } => Ok(CommandResponse::Receive { address }),
+        TelegramWavsCommand::Connect => {
+            if raw.chat.chat_type != TelegramChatType::Private {
+                match state.get_user_session(raw.from.id) {
+                    Some(session) => {
+                        state
+                            .tg_bot()
+                            .send_miniapp_button(
+                                session.message.chat.id,
+                                "Connect your wallet",
+                                "https://telegram-payments-miniapp.vercel.app",
+                            )
+                            .await?;
+
+                        Ok(None)
+                    }
+                    None => Err(TelegramBotError::NeedToStart),
+                }
+            } else {
+                state
+                    .tg_bot()
+                    .send_miniapp_button(
+                        raw.chat.id,
+                        "Connect your wallet",
+                        "https://telegram-payments-miniapp.vercel.app",
+                    )
+                    .await?;
+                Ok(None)
+            }
+        }
+        TelegramWavsCommand::Status {} => Ok(Some(query_status(state, raw.from).await?)),
+        TelegramWavsCommand::Receive { address, .. } => {
+            Ok(Some(CommandResponse::Receive { address }))
+        }
         TelegramWavsCommand::Send {
             handle,
             amount,
             denom,
-        } => Ok(CommandResponse::Send {
+        } => Ok(Some(CommandResponse::Send {
             handle,
             amount,
             denom,
-        }),
-        TelegramWavsCommand::GroupId { group_id } => Ok(CommandResponse::GroupId { group_id }),
-        TelegramWavsCommand::Help {} => Ok(CommandResponse::Help),
+        })),
+        TelegramWavsCommand::GroupId { group_id } => {
+            Ok(Some(CommandResponse::GroupId { group_id }))
+        }
+        TelegramWavsCommand::Help {} => Ok(Some(CommandResponse::Help)),
         TelegramWavsCommand::Admin(admin_command) => {
             let expected_admin_key = std::env::var("SERVER_TELEGRAM_ADMIN_KEY").unwrap_or_default();
 
@@ -238,7 +284,7 @@ async fn handle_command(
                         .await
                         .map_err(TelegramBotError::SetService)?;
 
-                    Ok(CommandResponse::SetService { service })
+                    Ok(Some(CommandResponse::SetService { service }))
                 }
             }
         }
@@ -250,7 +296,7 @@ async fn handle_command(
 
             match uri {
                 None => Err(TelegramBotError::ServiceNotSet),
-                Some(uri) => Ok(CommandResponse::Service { uri }),
+                Some(uri) => Ok(Some(CommandResponse::Service { uri })),
             }
         }
     }
