@@ -1,5 +1,4 @@
 use layer_climb::prelude::CosmosAddr;
-use wavs_types::contracts::cosmwasm::service_handler::WavsEnvelope;
 
 use crate::wavs::aggregator::aggregator::{CosmosAddress, CosmosSubmitAction, SubmitAction};
 
@@ -13,7 +12,7 @@ wit_bindgen::generate!({
 struct Component;
 
 impl Guest for Component {
-    fn process_packet(packet: Packet) -> Result<Vec<AggregatorAction>, String> {
+    fn process_packet(_packet: Packet) -> Result<Vec<AggregatorAction>, String> {
         let chain = host::config_var("CHAIN").ok_or("CHAIN config var is required")?;
         let payments_addr = host::config_var("PAYMENTS_CONTRACT_ADDRESS")
             .ok_or("PAYMENTS_CONTRACT_ADDRESS config var is required")?;
@@ -22,15 +21,6 @@ impl Guest for Component {
             .ok_or(format!("failed to get chain config for {}", chain))?;
 
         let payments_addr = CosmosAddr::new_str(&payments_addr, None).map_err(|e| e.to_string())?;
-
-        let envelope = WavsEnvelope {
-            data: packet.envelope.clone(),
-            sender: None,
-        };
-        let envelope_temp = packet
-            .envelope
-            .decode()
-            .map_err(|e| ContractError::AbiDecode(e.to_string()))?;
 
         Ok(vec![AggregatorAction::Submit(SubmitAction::Cosmos(
             CosmosSubmitAction {

@@ -38,7 +38,7 @@ tg-test-common = { path = "packages/tests/_common" }
 tg-contract-payments = { path = "packages/contracts/payments" }
 
 # WAVS
-wavs-types = { version = "=2.0.0-alpha.7", default-features = false, features = [
+wavs-types = { version = "=2.0.0-rc.3", default-features = false, features = [
   "cosmwasm",
 ] }
 wavs-wasi-utils = "2.0.0"

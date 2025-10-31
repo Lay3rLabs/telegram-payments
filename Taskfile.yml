@@ -51,5 +51,7 @@ tasks:
     cmds:
       - task components:build COMPONENT=operator
       - task components:build COMPONENT=aggregator
+      - task contracts:build-all COMPONENT=aggregator
       - task deploy:operator-delete-service
-      - task deploy:all SKIP_UPLOAD_CONTRACTS=true
+      # - task deploy:all SKIP_UPLOAD_CONTRACTS=true
+      - task deploy:all

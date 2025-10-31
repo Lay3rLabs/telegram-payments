@@ -4,7 +4,13 @@ See [GettingStarted.md](./GettingStarted.md) for initial setup instructions.
 
 This document assumes you have already:
 
-1. Started the backend
+1. Built everything:
+
+```bash
+task contracts:build-all && task components:build-all
+```
+
+2. Started the backend
 
 ```bash
 task backend:start-all
@@ -16,16 +22,10 @@ task backend:start-all
 # `task backend:ngrok-start`
 ```
 
-2. Funded the wallets
+3. Funded the wallets
 
 ```bash
 task deploy:tap-faucet-all
-```
-
-3. Built everything:
-
-```bash
-task contracts:build-all && task components:build-all
 ```
 
 Then it's as simple as this to deploy everything
@@ -41,7 +41,7 @@ this assumes they were already uploaded before and the output files exist
 task deploy:all SKIP_UPLOAD_CONTRACTS=true SKIP_UPLOAD_COMPONENTS=true
 ```
 
-Sometimes you may need to explicitly activate the service:
+Right now the project is setup so services start activated, but if you change that to start paused, you may need to explicitly activate the service:
 
 ```bash
 task deploy:activate-service
@@ -57,13 +57,11 @@ Ultimately, deploying consists of the following steps:
 3. Upload our contracts to get code IDs
 4. Instantiate our contracts to get addresses
 5. Upload components to get IPFS CIDs
-6. Create and upload services to get IPFS CIDs (in paused state)
+6. Create and upload services to get IPFS CIDs
 7. Set the service URI on the service manager contract
 8. Add the service manager address to aggregator node
 9. Add the service manager address to wavs nodes
 10. Set the operator signing keys
-11. Recreate and reset the service URI
-
 
 Each of these steps with independent commands is described below.
 
