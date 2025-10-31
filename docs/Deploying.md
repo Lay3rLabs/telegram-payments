@@ -2,15 +2,15 @@
 
 See [GettingStarted.md](./GettingStarted.md) for initial setup instructions.
 
-This document assumes you have already:
+It's as easy as 1-2-3-4 to deploy everything locally>
 
-1. Built everything:
+1. Build everything:
 
 ```bash
-task contracts:build-all && task components:build-all
+task build-all
 ```
 
-2. Started the backend
+2. Start the backend
 
 ```bash
 task backend:start-all

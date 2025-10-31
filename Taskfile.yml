@@ -47,7 +47,7 @@ tasks:
       - |
         {{.DOCKER_SUDO}} docker pull {{.IPFS_DOCKER_IMAGE}}
 
-  foo:
+  debugging:
     cmds:
       - task components:build COMPONENT=operator
       - task components:build COMPONENT=aggregator

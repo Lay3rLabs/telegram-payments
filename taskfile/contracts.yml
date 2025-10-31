@@ -8,7 +8,7 @@ includes:
 tasks:
   clean-all:
     cmds:
-      - for: { var: ALL_CONTRACTS }
+      - for: { var: ALL_CONTRACTS, parallel: true }
         task: clean
         vars:
           CONTRACT: "{{.ITEM}}"
@@ -30,7 +30,7 @@ tasks:
 
   build-all:
     cmds:
-      - for: { var: ALL_CONTRACTS }
+      - for: { var: ALL_CONTRACTS, parallel: true }
         task: build
         vars:
           CONTRACT: "{{.ITEM}}"
@@ -60,10 +60,12 @@ tasks:
         {{.DOCKER_SUDO}} rm -rf "./artifacts/{{.CONTRACT_FILE}}" || true
       - echo "Built contract at {{.CONTRACTS_ARTIFACTS_PATH}}/{{.CONTRACT_FILE}}"
 
-  all-schema:
+  schema-all:
     cmds:
-      - for: { var: ALL_CONTRACTS }
-        cmd: task contracts:schema CONTRACT={{.ITEM}}
+      - for: { var: ALL_CONTRACTS, parallel: true }
+        task: schema
+        vars:
+          CONTRACT: "{{.ITEM}}"
 
   schema:
     requires:

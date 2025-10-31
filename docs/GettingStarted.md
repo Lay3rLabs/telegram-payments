@@ -52,7 +52,7 @@ task contracts:build CONTRACT=payments
 To generate the schema files from the contracts (found in `builds/schema/`)
 
 ```bash
-task contracts:all-schema
+task contracts:schema-all
 ```
 
 
