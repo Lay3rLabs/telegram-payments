@@ -11,9 +11,7 @@ use tg_utils::telegram::{
             TelegramBotCommand, TelegramWavsAdminCommand, TelegramWavsAdminCommandPrefix,
             TelegramWavsCommand, TelegramWavsCommandPrefix,
         },
-        native::{
-            TelegramResponseMethod, TelegramUser, TelegramWebHookRequest, TelegramWebHookResponse,
-        },
+        native::{TelegramChatType, TelegramUser, TelegramWebHookRequest, TelegramWebHookResponse},
     },
     error::{TelegramBotError, TgResult},
 };
@@ -25,8 +23,6 @@ pub async fn handle_tg_webhook(
     Json(req): Json<TelegramWebHookRequest>,
 ) -> impl IntoResponse {
     tracing::info!("GOT REQUEST: {:?}", req);
-
-    let chat_id = req.message.as_ref().map(|m| m.chat.id);
 
     let message = match req.message {
         Some(msg) => msg,
@@ -64,26 +60,27 @@ pub async fn handle_tg_webhook(
         }
     }
 
-    let msg = match TelegramBotCommand::try_from(message) {
+    let chat_type = message.chat.chat_type.clone();
+    let chat_id = message.chat.id;
+
+    let response = match TelegramBotCommand::try_from(message) {
         Ok(command) => match handle_command(state, command).await {
-            Ok(response) => response.to_string(),
-            Err(e) => e.to_string(),
+            Ok(response) => Ok(response),
+            Err(err) => Err(err),
         },
-        Err(err) => err.to_string(),
+        Err(err) => Err(err),
     };
 
-    match (chat_id, !msg.is_empty()) {
-        (Some(chat_id), true) => {
-            let response = TelegramWebHookResponse {
-                method: TelegramResponseMethod::SendMessge,
-                chat_id,
-                text: msg,
-                parse_mode: Some("Markdown".to_string()),
-            };
-
-            Json(response).into_response()
+    match response {
+        Ok(resp) => Json(TelegramWebHookResponse::new(chat_id, resp.to_string())).into_response(),
+        Err(err) => {
+            if err.only_respond_to_dm() && chat_type != TelegramChatType::Private {
+                tracing::warn!("Not sending message because chat type is {chat_type:?}");
+                Response::new(().into())
+            } else {
+                Json(TelegramWebHookResponse::new(chat_id, err.to_string())).into_response()
+            }
         }
-        _ => Response::new(().into()),
     }
 }
 
@@ -219,6 +216,10 @@ async fn handle_command(
 
             if expected_admin_key.is_empty() || admin_command.admin_key() != expected_admin_key {
                 return Err(tg_utils::telegram::error::TelegramBotError::Unauthorized.into());
+            }
+
+            if raw.chat.chat_type != TelegramChatType::Private {
+                return Err(tg_utils::telegram::error::TelegramBotError::DirectMessageOnly.into());
             }
 
             match admin_command {

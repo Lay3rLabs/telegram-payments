@@ -8,14 +8,16 @@ pub type TgResult<T> = Result<T, TelegramBotError>;
 pub enum TelegramBotError {
     #[error("Unauthorized")]
     Unauthorized,
+    #[error("This command can only be used in direct messages")]
+    DirectMessageOnly,
     #[error("Invalid group id")]
     InvalidGroupId,
     #[error("Unknown command: {0}")]
     UnknownCommand(String),
     #[error("Invalid command format```Usage:\n{prefix} {format}```", format = prefix.format())]
     InvalidCommandFormat { prefix: TelegramWavsCommandPrefix },
-    #[error("")]
-    EmptyMessage,
+    #[error("Bad command. Try `/help` for more information.")]
+    BadCommand,
     #[error("Parse: {0}")]
     Parse(String),
     #[error("This is not a group chat ;)")]
@@ -34,4 +36,14 @@ pub enum TelegramBotError {
     StatusAny(anyhow::Error),
     #[error("User does not have a username set")]
     NoUsername,
+}
+
+impl TelegramBotError {
+    pub fn only_respond_to_dm(&self) -> bool {
+        match self {
+            TelegramBotError::BadCommand => true,
+            // for right now let any error go through anywhere else
+            _ => false,
+        }
+    }
 }
