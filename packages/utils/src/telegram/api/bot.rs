@@ -139,9 +139,9 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
         let (prefix, parts) = match message.text.clone() {
             Some(text) => {
                 let mut iter = text.split_whitespace();
-                let prefix = iter.next().ok_or(TelegramBotError::EmptyMessage)?;
+                let prefix = iter.next().ok_or(TelegramBotError::BadCommand)?;
                 let prefix = if prefix == "/admin" {
-                    let next = iter.next().ok_or(TelegramBotError::EmptyMessage)?;
+                    let next = iter.next().ok_or(TelegramBotError::BadCommand)?;
                     TelegramWavsCommandPrefix::from_str(&format!("{} {}", prefix, next))?
                 } else {
                     TelegramWavsCommandPrefix::from_str(prefix)?
@@ -150,7 +150,7 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
                 (prefix, iter.map(|s| s.to_string()).collect::<Vec<_>>())
             }
             None => {
-                return Err(TelegramBotError::EmptyMessage);
+                return Err(TelegramBotError::BadCommand);
             }
         };
 

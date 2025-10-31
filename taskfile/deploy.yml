@@ -43,7 +43,7 @@ tasks:
             sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
       - task: operator-set-signing-key
         vars:
-          WEIGHT: "100"
+          WEIGHT: "{{.WEIGHT | default .DEFAULT_MIDDLEWARE_SIGNER_WEIGHT}}"
           FILENAME: "operator-signing-key.json"
       - echo ""
       - echo "✅ Deployment completed! Artifacts are in {{.DEPLOYMENTS_ARTIFACTS_PATH}}"
@@ -259,8 +259,8 @@ tasks:
     requires:
       vars: [MANAGER_CODE_ID, REGISTRY_CODE_ID, FILENAME]
     vars:
-      THRESHOLD: 1000
-      STRATEGIES: "test_strategy_1=100 test_strategy_2=200"
+      THRESHOLD: "{{.THRESHOLD | default .DEFAULT_MIDDLEWARE_THRESHOLD}}"
+      STRATEGIES: "{{.STRATEGIES | default .DEFAULT_MIDDLEWARE_STRATEGIES}}"
     cmds:
       - echo "🚀 Instantiating middleware contracts..."
       - mkdir -p "{{.ARTIFACTS_PATH}}"
@@ -285,7 +285,7 @@ tasks:
   ###################################################################
   operator-set-signing-key:
     requires:
-      vars: [WEIGHT, FILENAME]
+      vars: [FILENAME]
     vars:
       OPERATORS_RANGE:
         sh: seq 1 {{.OPERATORS | default "1"}}
@@ -301,6 +301,7 @@ tasks:
     requires:
       vars: [WEIGHT, FILENAME]
     vars:
+      WEIGHT: "{{.WEIGHT | default .DEFAULT_MIDDLEWARE_SIGNER_WEIGHT}}"
       WAVS_INSTANCE: "{{index .MATCH 0}}"
       OPERATOR_MNEMONIC:
         sh: task backend:get-wavs-operator-mnemonic-{{.WAVS_INSTANCE}}

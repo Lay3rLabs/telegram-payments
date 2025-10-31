@@ -47,9 +47,17 @@ tasks:
       - |
         {{.DOCKER_SUDO}} docker pull {{.IPFS_DOCKER_IMAGE}}
 
-  foo:
+  build-all:
+    desc: "Build everything that needs building"
     cmds:
-      - task components:build COMPONENT=operator
-      - task components:build COMPONENT=aggregator
+      - task components:build-all
+      - task contracts:build-all
+      - task contracts:schema-all
+
+  debugging:
+    cmds:
+      - task components:build-all
+      - task contracts:build-all
       - task deploy:operator-delete-service
-      - task deploy:all SKIP_UPLOAD_CONTRACTS=true
+      # - task deploy:all SKIP_UPLOAD_CONTRACTS=true
+      - task deploy:all

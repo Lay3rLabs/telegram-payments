@@ -28,7 +28,7 @@ tasks:
 
   build-all:
     cmds:
-      - for: { var: ALL_COMPONENTS }
+      - for: { var: ALL_COMPONENTS, parallel: true }
         task: build
         vars:
           COMPONENT: "{{.ITEM}}"

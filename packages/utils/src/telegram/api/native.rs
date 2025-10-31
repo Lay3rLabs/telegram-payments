@@ -11,6 +11,18 @@ pub struct TelegramWebHookResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parse_mode: Option<String>,
 }
+
+impl TelegramWebHookResponse {
+    pub fn new(chat_id: i64, text: String) -> Self {
+        Self {
+            chat_id,
+            method: TelegramResponseMethod::SendMessge,
+            text,
+            parse_mode: Some("Markdown".to_string()),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum TelegramResponseMethod {
     #[serde(rename = "sendMessage")]
