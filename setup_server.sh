@@ -28,10 +28,10 @@ git clone https://github.com/Lay3rLabs/telegram-payments.git
 ### Aggregator
 
 # task backend:start-wavs-telemetry
-# task backend:start-aggregator
+# task backend:start-wavs-aggregator
 
 ### Operator
 
 # task backend:start-wavs-telemetry
-# task backend:start-operator-1
+# task backend:start-wavs-operator-1
 
