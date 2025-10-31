@@ -80,8 +80,10 @@ tasks:
         vars:
           CONTRACT_PAYMENTS: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/payments.json"
           MIDDLEWARE: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/middleware.json"
-          COMPONENT_OPERATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/operator-cid.json"
-          COMPONENT_AGGREGATOR: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/aggregator-cid.json"
+          COMPONENT_OPERATOR_COMMANDER: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/operator-commander-cid.json"
+          COMPONENT_OPERATOR_REPORTER: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/operator-reporter-cid.json"
+          COMPONENT_AGGREGATOR_SUBMITTER: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/aggregator-submitter-cid.json"
+          COMPONENT_AGGREGATOR_MESSENGER: "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/aggregator-messenger-cid.json"
           FILENAME: service-cid.json
           ACTIVATE: "{{.ACTIVATE}}"
       - task: middleware-set-service-uri
@@ -116,12 +118,24 @@ tasks:
     cmds:
       - task: component-upload
         vars:
-          COMPONENT: operator
-          FILENAME: operator-cid.json
+          COMPONENT: commander
+          KIND: operator
+          FILENAME: operator-commander-cid.json
       - task: component-upload
         vars:
-          COMPONENT: aggregator
-          FILENAME: aggregator-cid.json
+          COMPONENT: reporter
+          KIND: operator
+          FILENAME: operator-reporter-cid.json
+      - task: component-upload
+        vars:
+          COMPONENT: messenger
+          KIND: aggregator
+          FILENAME: aggregator-messenger-cid.json
+      - task: component-upload
+        vars:
+          COMPONENT: submitter
+          KIND: aggregator
+          FILENAME: aggregator-submitter-cid.json
 
   all-log-skip-upload-contracts:
     vars:
@@ -204,13 +218,13 @@ tasks:
 
   component-upload:
     requires:
-      vars: [COMPONENT, FILENAME]
+      vars: [COMPONENT, KIND, FILENAME]
     vars:
       IPFS_API_URL: "http://127.0.0.1:{{.IPFS_API_PORT}}"
       IPFS_GATEWAY_URL: "http://127.0.0.1:{{.IPFS_GATEWAY_PORT}}"
     cmds:
       - echo "🚀 Uploading component {{.COMPONENT}} to IPFS..."
-      - cd packages/cli && cargo run upload-component --kind {{.COMPONENT}} --output-filename={{.FILENAME}} --ipfs-api-url {{.IPFS_API_URL}} --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
+      - cd packages/cli && cargo run upload-component --kind {{.KIND}} --component {{.COMPONENT}} --output-filename={{.FILENAME}} --ipfs-api-url {{.IPFS_API_URL}} --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
 
   ###################################################################
   ######################## MIDDLEWARE ###############################
@@ -336,8 +350,10 @@ tasks:
         [
           CONTRACT_PAYMENTS,
           MIDDLEWARE,
-          COMPONENT_OPERATOR,
-          COMPONENT_AGGREGATOR,
+          COMPONENT_OPERATOR_COMMANDER,
+          COMPONENT_OPERATOR_REPORTER,
+          COMPONENT_AGGREGATOR_MESSENGER,
+          COMPONENT_AGGREGATOR_SUBMITTER,
           FILENAME,
           ACTIVATE,
         ]
@@ -345,19 +361,23 @@ tasks:
       IPFS_API_URL: "http://127.0.0.1:{{.IPFS_API_PORT}}"
       IPFS_GATEWAY_URL: "http://127.0.0.1:{{.IPFS_GATEWAY_PORT}}"
       AGGREGATOR_URL: "http://127.0.0.1:{{.WAVS_AGGREGATOR_PORT}}"
+      TELEGRAM_GROUP_ID: "{{.TELEGRAM_GROUP_ID | default .WAVS_AGGREGATOR_TELEGRAM_GROUP_ID}}"
     cmds:
       - echo "🚀 Uploading Service JSON to IPFS ..."
       - >
         cd packages/cli && cargo run upload-service
         --output-filename={{.FILENAME}}
-        --ipfs-api-url {{.IPFS_API_URL}}
-        --ipfs-gateway-url {{.IPFS_GATEWAY_URL}}
-        --contract-payments-instantiation-file "{{.CONTRACT_PAYMENTS}}"
-        --middleware-instantiation-file "{{.MIDDLEWARE}}"
-        --component-operator-cid-file "{{.COMPONENT_OPERATOR}}"
-        --component-aggregator-cid-file "{{.COMPONENT_AGGREGATOR}}"
-        --cron-schedule "{{.SERVICE_CRON_SCHEDULE}}"
-        --aggregator-url {{.AGGREGATOR_URL}}
+        --ipfs-api-url={{.IPFS_API_URL}}
+        --ipfs-gateway-url={{.IPFS_GATEWAY_URL}}
+        --contract-payments-instantiation-file="{{.CONTRACT_PAYMENTS}}"
+        --middleware-instantiation-file="{{.MIDDLEWARE}}"
+        --component-operator-commander-cid-file="{{.COMPONENT_OPERATOR_COMMANDER}}"
+        --component-operator-reporter-cid-file="{{.COMPONENT_OPERATOR_REPORTER}}"
+        --component-aggregator-messenger-cid-file="{{.COMPONENT_AGGREGATOR_MESSENGER}}"
+        --component-aggregator-submitter-cid-file="{{.COMPONENT_AGGREGATOR_SUBMITTER}}"
+        --telegram-group-id={{.TELEGRAM_GROUP_ID}}
+        --cron-schedule="{{.SERVICE_CRON_SCHEDULE}}"
+        --aggregator-url={{.AGGREGATOR_URL}}
         {{ if eq .ACTIVATE "true" }} --activate {{ end }}
 
   middleware-set-service-uri:

@@ -84,6 +84,7 @@ pub struct OutputContractInstantiate {
 #[serde(rename_all = "snake_case")]
 pub struct OutputComponentUpload {
     pub kind: ComponentKind,
+    pub component: String,
 
     /// The hash of the file,
     pub digest: ComponentDigest,

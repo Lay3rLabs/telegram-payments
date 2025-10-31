@@ -105,9 +105,14 @@ pub trait TelegramMessengerExt {
     ) -> TgResult<T> {
         let url = format!("https://api.telegram.org/bot{}/{}", self.token(), method);
 
-        let text = self.fetch_params(&url, &params).await?;
+        let res = self.fetch_params(&url, &params).await;
 
-        tracing::info!("Response: {}", text);
+        match &res {
+            Ok(text) => println!("Response: {:?}", text),
+            Err(e) => println!("Error fetching params: {:?}", e),
+        }
+
+        let text = res?;
 
         let json: TelegramResult<T> =
             serde_json::from_str(&text).map_err(|e| TelegramBotError::Internal(e.to_string()))?;

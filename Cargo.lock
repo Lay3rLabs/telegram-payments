@@ -5046,7 +5046,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "tg-component-aggregator"
+name = "tg-component-aggregator-messenger"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "cosmwasm-std",
+ "layer-climb",
+ "serde",
+ "serde_json",
+ "tg-components-shared",
+ "tg-contract-api",
+ "tg-utils",
+ "thiserror 2.0.17",
+ "wavs-types",
+ "wavs-wasi-utils",
+ "wit-bindgen 0.47.0",
+ "wit-bindgen-rt",
+ "wstd",
+]
+
+[[package]]
+name = "tg-component-aggregator-submitter"
 version = "0.0.1"
 dependencies = [
  "anyhow",
@@ -5065,7 +5086,50 @@ dependencies = [
 ]
 
 [[package]]
-name = "tg-component-operator"
+name = "tg-component-operator-commander"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "cfg-if",
+ "cosmwasm-std",
+ "layer-climb",
+ "serde",
+ "serde_json",
+ "tg-contract-api",
+ "tg-utils",
+ "thiserror 2.0.17",
+ "wavs-types",
+ "wavs-wasi-utils",
+ "wit-bindgen 0.47.0",
+ "wit-bindgen-rt",
+ "wstd",
+]
+
+[[package]]
+name = "tg-component-operator-reporter"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "cfg-if",
+ "cosmwasm-std",
+ "layer-climb",
+ "serde",
+ "serde_json",
+ "tg-components-shared",
+ "tg-contract-api",
+ "tg-utils",
+ "thiserror 2.0.17",
+ "wavs-types",
+ "wavs-wasi-utils",
+ "wit-bindgen 0.47.0",
+ "wit-bindgen-rt",
+ "wstd",
+]
+
+[[package]]
+name = "tg-components-shared"
 version = "0.0.1"
 dependencies = [
  "anyhow",

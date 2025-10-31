@@ -1,7 +1,8 @@
 version: "3"
 
 vars:
-  ALL_COMPONENTS: ["operator", "aggregator"]
+  ALL_OPERATOR_COMPONENTS: ["commander", "reporter"]
+  ALL_AGGREGATOR_COMPONENTS: ["messenger", "submitter"]
   ALL_CONTRACTS: ["payments"]
   ALL_MNEMONICS_TO_FUND:
     [
@@ -10,8 +11,10 @@ vars:
       "WAVS_OPERATOR_MNEMONIC_2",
       "WAVS_AGGREGATOR_COSMOS_CREDENTIAL",
     ]
-  COMPONENT_WITS_OPERATOR: ["wavs:operator@2.0.0"]
-  COMPONENT_WITS_AGGREGATOR: ["wavs:aggregator@2.0.0"]
+  COMPONENT_WITS_OPERATOR_COMMANDER: ["wavs:operator@2.0.0"]
+  COMPONENT_WITS_OPERATOR_REPORTER: ["wavs:operator@2.0.0"]
+  COMPONENT_WITS_AGGREGATOR_MESSENGER: ["wavs:aggregator@2.0.0"]
+  COMPONENT_WITS_AGGREGATOR_SUBMITTER: ["wavs:aggregator@2.0.0"]
 
   REPO_ROOT:
     # find the root directory of the repository by looking for the `.git` directory.

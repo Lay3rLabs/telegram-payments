@@ -4,6 +4,7 @@ use crate::state::{
 use cosmwasm_std::{ensure, AnyMsg, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
 use layer_climb_proto::Any;
 use layer_climb_proto::{authz::MsgExec, bank::MsgSend, Coin as ProtoCoin, Message, Name};
+use tg_contract_api::payments::event::{RegistrationEvent, SendPaymentEvent};
 use tg_contract_api::payments::msg::{RegisterReceiveMsg, SendPaymentMsg, WavsPayload};
 use wavs_types::contracts::cosmwasm::service_manager::ServiceManagerQueryMessages;
 use wavs_types::contracts::cosmwasm::{
@@ -109,7 +110,7 @@ pub fn _register_receive(
     }
     OPEN_ACCOUNTS.save(deps.storage, &tg_handle, &chain_addr)?;
 
-    let mut resp = Response::new().add_attribute("method", "register_receive");
+    let mut resp = Response::new();
 
     // TODO: check if there are any pending payments for this tg_handle and send them
     if let Some(pending) = PENDING_PAYMENTS.may_load(deps.storage, &tg_handle)? {
@@ -121,9 +122,10 @@ pub fn _register_receive(
         resp = resp.add_message(msg);
     }
 
-    Ok(resp
-        .add_attribute("tg_handle", tg_handle)
-        .add_attribute("chain_addr", chain_addr))
+    Ok(resp.add_event(RegistrationEvent {
+        tg_handle,
+        address: chain_addr,
+    }))
 }
 
 pub fn _send_payment(
@@ -192,9 +194,12 @@ pub fn _send_payment(
 
     Ok(Response::new()
         .add_message(any_msg)
-        .add_attribute("method", "send_payment")
-        .add_attribute("from_tg", from_tg)
-        .add_attribute("to_tg", to_tg)
-        .add_attribute("amount", amount.amount)
-        .add_attribute("denom", amount.denom))
+        .add_event(SendPaymentEvent {
+            from_tg_handle: from_tg.clone(),
+            to_tg_handle: to_tg.clone(),
+            from_address: from_addr,
+            to_address: to_addr,
+            amount: amount.amount,
+            denom: amount.denom.clone(),
+        }))
 }

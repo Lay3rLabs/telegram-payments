@@ -188,6 +188,7 @@ tasks:
       WAVS_AGGREGATOR_COSMOS_CREDENTIAL:
         sh: task backend:get-wavs-aggregator-cosmos-credential
       WAVS_LOG_LEVEL: '{{.RUST_LOG | default "info"}}'
+      WAVS_ENV_AGGREGATOR_TELEGRAM_BOT_TOKEN: "{{.WAVS_AGGREGATOR_TELEGRAM_BOT_TOKEN}}"
     cmds:
       - echo "Starting WAVS Aggregator on port {{.WAVS_AGGREGATOR_PORT}}"
       - |

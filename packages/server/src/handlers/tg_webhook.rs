@@ -28,9 +28,9 @@ pub async fn handle_tg_webhook(
         Some(msg) => msg,
         None => {
             if req.edited_message.is_some() {
-                tracing::debug!("Ignoring edited message");
+                tracing::warn!("Ignoring edited message");
             } else {
-                tracing::debug!("No message found in the request");
+                tracing::warn!("No message found in the request");
             }
             return Response::new(().into());
         }
@@ -74,6 +74,8 @@ pub async fn handle_tg_webhook(
     match response {
         Ok(resp) => Json(TelegramWebHookResponse::new(chat_id, resp.to_string())).into_response(),
         Err(err) => {
+            tracing::warn!("{err:?}");
+
             if err.only_respond_to_dm() && chat_type != TelegramChatType::Private {
                 tracing::warn!("Not sending message because chat type is {chat_type:?}");
                 Response::new(().into())
@@ -145,7 +147,11 @@ impl std::fmt::Display for CommandResponse {
             }
 
             CommandResponse::SetService { service } => {
-                write!(f, "```Service: {:#?}```", service)
+                write!(
+                    f,
+                    "Service manager changed to `{}`",
+                    service.manager.address()
+                )
             }
             CommandResponse::Service { uri } => {
                 write!(f, "Service: {}", uri)
