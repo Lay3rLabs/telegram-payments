@@ -5,7 +5,7 @@ pub type TelegramWebHookRequest = TelegramUpdate;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct TelegramWebHookResponse {
-    pub chat_id: i64,
+    pub chat_id: String,
     pub method: TelegramResponseMethod,
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -14,13 +14,31 @@ pub struct TelegramWebHookResponse {
 
 impl TelegramWebHookResponse {
     pub fn new(chat_id: i64, text: String) -> Self {
+        let text = escape_markdown_v2(&text);
         Self {
-            chat_id,
+            chat_id: chat_id.to_string(),
             method: TelegramResponseMethod::SendMessge,
             text,
-            parse_mode: Some("Markdown".to_string()),
+            parse_mode: Some("MarkdownV2".to_string()),
         }
     }
+}
+
+pub fn escape_markdown_v2(text: &str) -> String {
+    // quick fix for debugging, get rid of all backticks
+    let text = text.replace("`", "");
+
+    let special_chars = [
+        '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!',
+    ];
+    let mut escaped = String::with_capacity(text.len() * 2);
+    for c in text.chars() {
+        if special_chars.contains(&c) {
+            escaped.push('\\');
+        }
+        escaped.push(c);
+    }
+    escaped
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]

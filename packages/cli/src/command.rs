@@ -79,7 +79,7 @@ pub enum CliCommand {
         cron_schedule: String,
 
         #[arg(long)]
-        telegram_group_id: i64,
+        server_component_endpoint: String,
 
         #[arg(long)]
         aggregator_url: Url,

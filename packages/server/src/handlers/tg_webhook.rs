@@ -1,17 +1,18 @@
 mod status;
 
 use crate::state::{HttpState, InitialTelegramSession};
-use axum::{extract::State, http::Response, response::IntoResponse, Json};
+use axum::{extract::State, response::IntoResponse, Json};
 use cosmwasm_std::Uint256;
 use layer_climb::prelude::CosmosAddr;
 use status::query_status;
+use tg_utils::telegram::api::native::TelegramWebHookResponse;
 use tg_utils::telegram::{
     api::{
         bot::{
             TelegramBotCommand, TelegramWavsAdminCommand, TelegramWavsAdminCommandPrefix,
             TelegramWavsCommand, TelegramWavsCommandPrefix,
         },
-        native::{TelegramChatType, TelegramUser, TelegramWebHookRequest, TelegramWebHookResponse},
+        native::{TelegramChatType, TelegramUser, TelegramWebHookRequest},
     },
     error::{TelegramBotError, TgResult},
 };
@@ -22,6 +23,27 @@ pub async fn handle_tg_webhook(
     State(state): State<HttpState>,
     Json(req): Json<TelegramWebHookRequest>,
 ) -> impl IntoResponse {
+    match inner(state, req).await {
+        Ok(resp) => match resp {
+            Some(resp) => {
+                tracing::info!("Responding with: {:?}", resp);
+                Json(resp).into_response()
+            }
+            None => axum::http::StatusCode::OK.into_response(),
+        },
+        Err(err) => {
+            use crate::error::AnyError;
+
+            tracing::error!("Error handling telegram webhook: {err:?}");
+            AnyError::from(err).into_response()
+        }
+    }
+}
+
+async fn inner(
+    state: HttpState,
+    req: TelegramWebHookRequest,
+) -> anyhow::Result<Option<TelegramWebHookResponse>> {
     tracing::info!("GOT REQUEST: {:?}", req);
 
     let message = match req.message {
@@ -32,7 +54,7 @@ pub async fn handle_tg_webhook(
             } else {
                 tracing::warn!("No message found in the request");
             }
-            return Response::new(().into());
+            return Ok(None);
         }
     };
 
@@ -64,7 +86,7 @@ pub async fn handle_tg_webhook(
     let chat_id = message.chat.id;
 
     let response = match TelegramBotCommand::try_from(message) {
-        Ok(command) => match handle_command(state, command).await {
+        Ok(command) => match handle_command(state.clone(), command).await {
             Ok(response) => Ok(response),
             Err(err) => Err(err),
         },
@@ -73,19 +95,20 @@ pub async fn handle_tg_webhook(
 
     match response {
         Ok(resp) => match resp {
-            Some(resp) => {
-                Json(TelegramWebHookResponse::new(chat_id, resp.to_string())).into_response()
-            }
-            None => Response::new(().into()),
+            Some(resp) => Ok(Some(TelegramWebHookResponse::new(
+                chat_id,
+                resp.to_string(),
+            ))),
+            None => Ok(None),
         },
         Err(err) => {
             tracing::warn!("{err:?}");
 
             if err.only_respond_to_dm() && chat_type != TelegramChatType::Private {
                 tracing::warn!("Not sending message because chat type is {chat_type:?}");
-                Response::new(().into())
+                Ok(None)
             } else {
-                Json(TelegramWebHookResponse::new(chat_id, err.to_string())).into_response()
+                Ok(Some(TelegramWebHookResponse::new(chat_id, err.to_string())))
             }
         }
     }

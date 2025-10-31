@@ -1,5 +1,9 @@
 use anyhow::anyhow;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    sync::Arc,
+};
 use tg_utils::{
     config::load_chain_configs_from_wavs,
     telegram::{
@@ -18,6 +22,8 @@ pub struct HttpState {
     service: Arc<std::sync::Mutex<Option<wavs_types::Service>>>,
     query_clients: Arc<std::sync::Mutex<HashMap<ChainKey, QueryClient>>>,
     user_sessions: Arc<std::sync::Mutex<HashMap<i64, InitialTelegramSession>>>,
+    sent_event_ids: Arc<std::sync::Mutex<HashSet<Vec<u8>>>>,
+    pub component_secret: String,
 }
 
 #[derive(Clone, Debug)]
@@ -31,11 +37,18 @@ impl HttpState {
             .await
             .unwrap();
 
+        let component_secret = std::env::var("SERVER_COMPONENT_SECRET").unwrap_or_default();
+        if component_secret.is_empty() {
+            panic!("SERVER_COMPONENT_SECRET is not set");
+        }
+
         Self {
             chain_configs,
             service: Arc::new(std::sync::Mutex::new(None)),
             query_clients: Arc::new(std::sync::Mutex::new(HashMap::new())),
             user_sessions: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            sent_event_ids: Arc::new(std::sync::Mutex::new(HashSet::new())),
+            component_secret,
         }
     }
 
@@ -59,6 +72,10 @@ impl HttpState {
 
     pub fn get_user_session(&self, user_id: i64) -> Option<InitialTelegramSession> {
         self.user_sessions.lock().unwrap().get(&user_id).cloned()
+    }
+
+    pub fn should_send_event_id(&self, event_id: Vec<u8>) -> bool {
+        self.sent_event_ids.lock().unwrap().insert(event_id)
     }
 
     pub async fn set_service(&self, url: &String) -> anyhow::Result<wavs_types::Service> {

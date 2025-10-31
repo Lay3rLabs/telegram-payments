@@ -358,6 +358,9 @@ tasks:
           ACTIVATE,
         ]
     vars:
+      SERVER: "http://127.0.0.1:{{.SERVER_PORT}}"
+      DEFAULT_SERVER_COMPONENT_ENDPOINT: "{{.NGROK_URL | default .SERVER}}/telegram-component"
+      SERVER_COMPONENT_ENDPOINT: "{{.SERVER_COMPONENT_ENDPOINT | default .DEFAULT_SERVER_COMPONENT_ENDPOINT}}"
       IPFS_API_URL: "http://127.0.0.1:{{.IPFS_API_PORT}}"
       IPFS_GATEWAY_URL: "http://127.0.0.1:{{.IPFS_GATEWAY_PORT}}"
       AGGREGATOR_URL: "http://127.0.0.1:{{.WAVS_AGGREGATOR_PORT}}"
@@ -375,7 +378,7 @@ tasks:
         --component-operator-reporter-cid-file="{{.COMPONENT_OPERATOR_REPORTER}}"
         --component-aggregator-messenger-cid-file="{{.COMPONENT_AGGREGATOR_MESSENGER}}"
         --component-aggregator-submitter-cid-file="{{.COMPONENT_AGGREGATOR_SUBMITTER}}"
-        --telegram-group-id={{.TELEGRAM_GROUP_ID}}
+        --server-component-endpoint="{{.SERVER_COMPONENT_ENDPOINT}}"
         --cron-schedule="{{.SERVICE_CRON_SCHEDULE}}"
         --aggregator-url={{.AGGREGATOR_URL}}
         {{ if eq .ACTIVATE "true" }} --activate {{ end }}

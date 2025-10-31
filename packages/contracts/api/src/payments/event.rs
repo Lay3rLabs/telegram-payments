@@ -210,3 +210,66 @@ impl TryFrom<&cosmwasm_std::Event> for SendPaymentEvent {
         })
     }
 }
+
+#[cw_serde]
+pub struct ConnectEvent {
+    pub tg_handle: String,
+    pub address: Addr,
+}
+
+impl ConnectEvent {
+    pub const EVENT_TYPE: &'static str = "connect";
+    pub const EVENT_ATTR_KEY_TG_HANDLE: &'static str = "tg-handle";
+    pub const EVENT_ATTR_KEY_ADDRESS: &'static str = "address";
+}
+
+impl From<ConnectEvent> for cosmwasm_std::Event {
+    fn from(src: ConnectEvent) -> Self {
+        cosmwasm_std::Event::new(ConnectEvent::EVENT_TYPE)
+            .add_attribute(ConnectEvent::EVENT_ATTR_KEY_TG_HANDLE, src.tg_handle)
+            .add_attribute(
+                ConnectEvent::EVENT_ATTR_KEY_ADDRESS,
+                src.address.to_string(),
+            )
+    }
+}
+
+impl TryFrom<&cosmwasm_std::Event> for ConnectEvent {
+    type Error = anyhow::Error;
+
+    fn try_from(event: &cosmwasm_std::Event) -> Result<Self, Self::Error> {
+        if event.ty != Self::EVENT_TYPE && event.ty != format!("wasm-{}", Self::EVENT_TYPE) {
+            return Err(anyhow::anyhow!(
+                "Expected event type {}, found {}",
+                Self::EVENT_TYPE,
+                event.ty
+            ));
+        }
+
+        let mut tg_handle = None;
+        let mut address = None;
+
+        for attr in event.attributes.iter() {
+            match attr.key.as_str() {
+                Self::EVENT_ATTR_KEY_TG_HANDLE => tg_handle = Some(attr.value.to_string()),
+                Self::EVENT_ATTR_KEY_ADDRESS => {
+                    address = Some(Addr::unchecked(attr.value.to_string()))
+                }
+                _ => {}
+            }
+        }
+
+        match (tg_handle, address) {
+            (Some(tg_handle), Some(address)) => Ok(Self { tg_handle, address }),
+            (Some(_), None) => Err(anyhow::anyhow!(
+                "Missing attribute {}",
+                Self::EVENT_ATTR_KEY_ADDRESS
+            )),
+            (None, Some(_)) => Err(anyhow::anyhow!(
+                "Missing attribute {}",
+                Self::EVENT_ATTR_KEY_TG_HANDLE
+            )),
+            _ => Err(anyhow::anyhow!("Missing required attributes")),
+        }
+    }
+}
