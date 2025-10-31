@@ -54,6 +54,7 @@ async fn main() {
                 chain: ctx.args().chain.clone(),
                 address: service_manager_address.clone().try_into().unwrap(),
             };
+            println!("{}", &ctx.args().chain);
 
             let body = serde_json::to_string(&GetSignerRequest { service_manager }).unwrap();
 
@@ -643,9 +644,12 @@ async fn main() {
                     address: service_manager_address.parse().unwrap(),
                 },
             };
+            println!("{}", wavs_url.join("services").unwrap());
+            println!("{}", serde_json::to_string(&req).unwrap());
 
             reqwest::Client::new()
                 .post(wavs_url.join("services").unwrap())
+                .header("Content-Type", "application/json")
                 .json(&req)
                 .send()
                 .await
