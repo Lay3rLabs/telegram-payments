@@ -107,35 +107,39 @@ pub fn handle_action(trigger_action: TriggerAction) -> Result<Option<WasmRespons
 }
 
 fn get_next_command() -> Result<Option<WavsPayload>> {
-    let latest_offset: Option<i64> = get_offset()?;
+    loop {
+        let latest_offset: Option<i64> = get_offset()?;
 
-    println!("LATEST OFFSET: {:?}", latest_offset);
+        println!("LATEST OFFSET: {:?}", latest_offset);
 
-    let update = match get_updates(latest_offset, Some(1))?.into_iter().next() {
-        Some(update) => update,
-        None => {
-            return Ok(None);
+        let update = match get_updates(latest_offset, Some(1))?.into_iter().next() {
+            Some(update) => update,
+            None => {
+                // no more updates
+                return Ok(None);
+            }
+        };
+
+        println!("UPDATE: {:?}", update);
+
+        if let Err(e) = set_offset(update.update_id + 1) {
+            host::log(
+                LogLevel::Error,
+                &format!("failed to set latest offset after getting update: {e:?}"),
+            );
         }
-    };
 
-    println!("UPDATE: {:?}", update);
-
-    if let Err(e) = set_offset(update.update_id + 1) {
-        host::log(
-            LogLevel::Error,
-            &format!("failed to set latest offset after getting update: {e:?}"),
-        );
+        match parse_update(update) {
+            Some(command) => {
+                println!("COMMAND: {:?}", command);
+                if let Some(contract_msg) = map_command_to_contract(command) {
+                    // got a real command
+                    return Ok(Some(contract_msg));
+                }
+            }
+            None => {
+                host::log(LogLevel::Warn, "No valid message found in the update");
+            }
+        };
     }
-
-    let message = match parse_update(update) {
-        Some(msg) => msg,
-        None => {
-            host::log(LogLevel::Warn, "No valid message found in the update");
-            return Ok(None);
-        }
-    };
-
-    println!("MESSAGE: {:?}", message);
-
-    Ok(map_command_to_contract(message))
 }

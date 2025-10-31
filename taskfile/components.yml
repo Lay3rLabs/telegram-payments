@@ -163,7 +163,7 @@ tasks:
   ######################## EXEC #####################################
   ###################################################################
 
-  exec-operator-read-*:
+  exec-commander-read-*:
     vars:
       READ_KIND: "{{index .MATCH 0}}"
     cmds:
@@ -178,5 +178,5 @@ tasks:
         {{.WAVS_DOCKER_IMAGE}}
         wavs-cli exec
         --log-level '{{.RUST_LOG | default "info"}}'
-        --component /components/{{.COMPONENT_PREFIX}}_operator.wasm
+        --component /components/{{.COMPONENT_PREFIX}}_operator_commander.wasm
         --input "read-{{.READ_KIND}}"

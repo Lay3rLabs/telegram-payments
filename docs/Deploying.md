@@ -16,7 +16,7 @@ task build-all
 task backend:start-all
 
 # Note that this is for deploying, if you want to interact with the bot you'll need to additionally do one of these
-# `task backend:server-start` OR `task backend:server-start-watch`
+# `task backend:start-server` OR `task backend:start-server-watch`
 #
 # and possibly also start ngrok:
 # `task backend:ngrok-start`
