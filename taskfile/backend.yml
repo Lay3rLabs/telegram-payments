@@ -138,8 +138,8 @@ tasks:
         task: start-wavs-operator-{{.ITEM}}
 
   start-wavs-aggregator:
-    internal: true
     deps:
+      - task: docker-pull-wavs
       - task: docker-start-wavs-aggregator
     cmds:
       # Wait for WAVS Aggregator to be up and running
@@ -163,6 +163,7 @@ tasks:
       WAVS_PORT:
         sh: task backend:get-wavs-operator-port-{{.WAVS_INSTANCE}}
     deps:
+      - task: docker-pull-wavs
       - task: docker-start-wavs-operator-{{.WAVS_INSTANCE}}
     cmds:
       # Wait for WAVS instance to be up and running
@@ -266,7 +267,7 @@ tasks:
         {{.DOCKER_SUDO}} docker compose --file "{{.DOCKER_DIR}}/wavs-telemetry.yml" pull
 
   start-wavs-telemetry:
-    deps: [docker-start-wavs-telemetry]
+    deps: [docker-start-wavs-telemetry, docker-pull-wavs-telemetry]
     cmds:
       # Wait for Jaeger and Prometheus to be up and running
       # the deps here will ensure that the docker-start-telemetry task is run first
