@@ -2,8 +2,6 @@ use layer_climb::prelude::CosmosAddr;
 
 use crate::wavs::aggregator::aggregator::{CosmosAddress, CosmosSubmitAction, SubmitAction};
 
-mod entry;
-
 wit_bindgen::generate!({
     world: "aggregator-world",
     generate_all,

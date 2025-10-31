@@ -44,6 +44,9 @@ pub enum CliCommand {
         kind: ComponentKind,
 
         #[arg(long)]
+        component: String,
+
+        #[arg(long)]
         ipfs_api_url: Url,
 
         #[arg(long)]
@@ -61,13 +64,22 @@ pub enum CliCommand {
         middleware_instantiation_file: PathBuf,
 
         #[arg(long)]
-        component_operator_cid_file: PathBuf,
+        component_operator_commander_cid_file: PathBuf,
 
         #[arg(long)]
-        component_aggregator_cid_file: PathBuf,
+        component_operator_reporter_cid_file: PathBuf,
+
+        #[arg(long)]
+        component_aggregator_messenger_cid_file: PathBuf,
+
+        #[arg(long)]
+        component_aggregator_submitter_cid_file: PathBuf,
 
         #[arg(long)]
         cron_schedule: String,
+
+        #[arg(long)]
+        telegram_group_id: i64,
 
         #[arg(long)]
         aggregator_url: Url,
@@ -263,12 +275,12 @@ impl ComponentKind {
             Self::Aggregator => "aggregator",
         }
     }
-    pub async fn wasm_bytes(&self) -> Vec<u8> {
+    pub async fn wasm_bytes(&self, name: &str) -> Vec<u8> {
         let path = repo_root()
             .unwrap()
             .join("builds")
             .join("components")
-            .join(format!("tg_component_{}.wasm", self.as_str()));
+            .join(format!("tg_component_{}_{name}.wasm", self.as_str()));
 
         tokio::fs::read(&path)
             .await

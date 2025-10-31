@@ -291,17 +291,18 @@ async fn main() {
         }
         CliCommand::UploadComponent {
             kind,
+            component,
             args,
             ipfs_api_url,
             ipfs_gateway_url,
         } => {
-            let bytes = kind.wasm_bytes().await;
+            let bytes = kind.wasm_bytes(&component).await;
 
             let digest = wavs_types::ComponentDigest::hash(&bytes);
 
             let resp = IpfsFile::upload(
                 bytes,
-                &format!("{kind}.wasm"),
+                &format!("{kind}-{component}.wasm"),
                 ipfs_api_url.as_ref(),
                 ipfs_gateway_url.as_ref(),
                 true,
@@ -318,6 +319,7 @@ async fn main() {
             args.output()
                 .write(OutputComponentUpload {
                     kind,
+                    component,
                     digest,
                     cid,
                     uri,
@@ -331,8 +333,11 @@ async fn main() {
             ipfs_api_url,
             ipfs_gateway_url,
             contract_payments_instantiation_file,
-            component_operator_cid_file,
-            component_aggregator_cid_file,
+            component_operator_commander_cid_file,
+            component_operator_reporter_cid_file,
+            component_aggregator_messenger_cid_file,
+            component_aggregator_submitter_cid_file,
+            telegram_group_id,
             cron_schedule,
             middleware_instantiation_file,
             aggregator_url,
@@ -342,9 +347,14 @@ async fn main() {
 
             let contract_payments_instantiation_file =
                 output_directory.join(contract_payments_instantiation_file);
-            let component_operator_cid_file = output_directory.join(component_operator_cid_file);
-            let component_aggregator_cid_file =
-                output_directory.join(component_aggregator_cid_file);
+            let component_operator_commander_cid_file =
+                output_directory.join(component_operator_commander_cid_file);
+            let component_operator_reporter_cid_file =
+                output_directory.join(component_operator_reporter_cid_file);
+            let component_aggregator_submitter_cid_file =
+                output_directory.join(component_aggregator_submitter_cid_file);
+            let component_aggregator_messenger_cid_file =
+                output_directory.join(component_aggregator_messenger_cid_file);
             let middleware_instantiation_file =
                 output_directory.join(middleware_instantiation_file);
 
@@ -378,11 +388,17 @@ async fn main() {
             let contract_payments: OutputContractInstantiate =
                 read_and_decode(contract_payments_instantiation_file).await;
 
-            let component_operator: OutputComponentUpload =
-                read_and_decode(component_operator_cid_file).await;
+            let component_operator_commander: OutputComponentUpload =
+                read_and_decode(component_operator_commander_cid_file).await;
 
-            let component_aggregator: OutputComponentUpload =
-                read_and_decode(component_aggregator_cid_file).await;
+            let component_operator_reporter: OutputComponentUpload =
+                read_and_decode(component_operator_reporter_cid_file).await;
+
+            let component_aggregator_submitter: OutputComponentUpload =
+                read_and_decode(component_aggregator_submitter_cid_file).await;
+
+            let component_aggregator_messenger: OutputComponentUpload =
+                read_and_decode(component_aggregator_messenger_cid_file).await;
 
             #[derive(Debug, Deserialize)]
             struct MiddlewareInstantiation {
@@ -400,11 +416,11 @@ async fn main() {
                 end_time: None,
             };
 
-            let operator_component = wavs_types::Component {
+            let operator_commander_component = wavs_types::Component {
                 source: ComponentSource::Download {
                     //uri: component_operator.uri.parse().unwrap(),
-                    uri: component_operator.gateway_url.parse().unwrap(),
-                    digest: component_operator.digest,
+                    uri: component_operator_commander.gateway_url.parse().unwrap(),
+                    digest: component_operator_commander.digest,
                 },
                 permissions: wavs_types::Permissions {
                     allowed_http_hosts: wavs_types::AllowedHostPermission::All,
@@ -418,11 +434,33 @@ async fn main() {
                     .collect(),
             };
 
-            let aggregator_component = wavs_types::Component {
+            let operator_reporter_component = wavs_types::Component {
+                source: ComponentSource::Download {
+                    //uri: component_operator.uri.parse().unwrap(),
+                    uri: component_operator_reporter.gateway_url.parse().unwrap(),
+                    digest: component_operator_reporter.digest,
+                },
+                permissions: wavs_types::Permissions {
+                    allowed_http_hosts: wavs_types::AllowedHostPermission::All,
+                    file_system: false,
+                },
+                fuel_limit: None,
+                time_limit_seconds: None,
+                config: [(
+                    "PAYMENTS_CONTRACT_ADDRESS",
+                    contract_payments.address.clone(),
+                )]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+                env_keys: Default::default(),
+            };
+
+            let aggregator_submitter_component = wavs_types::Component {
                 source: ComponentSource::Download {
                     //uri: component_aggregator.uri.parse().unwrap(),
-                    uri: component_aggregator.gateway_url.parse().unwrap(),
-                    digest: component_aggregator.digest,
+                    uri: component_aggregator_submitter.gateway_url.parse().unwrap(),
+                    digest: component_aggregator_submitter.digest,
                 },
                 permissions: wavs_types::Permissions {
                     allowed_http_hosts: wavs_types::AllowedHostPermission::All,
@@ -433,7 +471,7 @@ async fn main() {
                 config: [
                     (
                         "PAYMENTS_CONTRACT_ADDRESS".to_string(),
-                        contract_payments.address,
+                        contract_payments.address.clone(),
                     ),
                     ("CHAIN".to_string(), args.chain.to_string()),
                 ]
@@ -442,23 +480,78 @@ async fn main() {
                 env_keys: Default::default(),
             };
 
-            let submit = Submit::Aggregator {
-                url: aggregator_url,
-                component: Box::new(aggregator_component),
+            let aggregator_messenger_component = wavs_types::Component {
+                source: ComponentSource::Download {
+                    //uri: component_aggregator.uri.parse().unwrap(),
+                    uri: component_aggregator_messenger.gateway_url.parse().unwrap(),
+                    digest: component_aggregator_messenger.digest,
+                },
+                permissions: wavs_types::Permissions {
+                    allowed_http_hosts: wavs_types::AllowedHostPermission::All,
+                    file_system: false,
+                },
+                fuel_limit: None,
+                time_limit_seconds: None,
+                config: [(
+                    "TELEGRAM_GROUP_ID".to_string(),
+                    telegram_group_id.to_string(),
+                )]
+                .into_iter()
+                .collect(),
+                env_keys: ["WAVS_ENV_AGGREGATOR_TELEGRAM_BOT_TOKEN".to_string()]
+                    .into_iter()
+                    .collect(),
+            };
+
+            let submit_chain = Submit::Aggregator {
+                url: aggregator_url.clone(),
+                component: Box::new(aggregator_submitter_component),
                 signature_kind: SignatureKind::evm_default(),
             };
 
-            let workflow = Workflow {
+            let submit_messenger = Submit::Aggregator {
+                url: aggregator_url,
+                component: Box::new(aggregator_messenger_component),
+                signature_kind: SignatureKind::evm_default(),
+            };
+
+            let workflow_1 = Workflow {
                 trigger,
-                component: operator_component,
-                submit,
+                component: operator_commander_component,
+                submit: submit_chain,
+            };
+
+            let workflow_2 = Workflow {
+                trigger: Trigger::CosmosContractEvent {
+                    address: contract_payments.address.clone().parse().unwrap(),
+                    chain: args.chain.clone(),
+                    event_type: tg_contract_api::payments::event::SendPaymentEvent::EVENT_TYPE
+                        .to_string(),
+                },
+                component: operator_reporter_component.clone(),
+                submit: submit_messenger.clone(),
+            };
+
+            let workflow_3 = Workflow {
+                trigger: Trigger::CosmosContractEvent {
+                    address: contract_payments.address.parse().unwrap(),
+                    chain: args.chain.clone(),
+                    event_type: tg_contract_api::payments::event::RegistrationEvent::EVENT_TYPE
+                        .to_string(),
+                },
+                component: operator_reporter_component,
+                submit: submit_messenger,
             };
 
             let service = Service {
                 name: "Telegram Payments".to_string(),
-                workflows: [("workflow-1".parse().unwrap(), workflow)]
-                    .into_iter()
-                    .collect(),
+                workflows: [
+                    ("workflow-1".parse().unwrap(), workflow_1),
+                    ("workflow-2".parse().unwrap(), workflow_2),
+                    ("workflow-3".parse().unwrap(), workflow_3),
+                ]
+                .into_iter()
+                .collect(),
                 status: if activate {
                     wavs_types::ServiceStatus::Active
                 } else {

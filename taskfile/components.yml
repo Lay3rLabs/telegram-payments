@@ -8,51 +8,62 @@ includes:
 tasks:
   clean-all:
     cmds:
-      - for: { var: ALL_COMPONENTS }
+      - for: { var: ALL_OPERATOR_COMPONENTS }
         task: clean
         vars:
           COMPONENT: "{{ .ITEM }}"
+          KIND: "operator"
+      - for: { var: ALL_AGGREGATOR_COMPONENTS }
+        task: clean
+        vars:
+          COMPONENT: "{{ .ITEM }}"
+          KIND: "aggregator"
       - echo "Cleaning artifacts directory"
       - |
         rm -rf "{{.COMPONENTS_ARTIFACTS_PATH}}"
 
   clean:
     requires:
-      vars: [COMPONENT]
+      vars: [COMPONENT, KIND]
     vars:
-      CONTRACT_SRC_NAME:
-        sh: task components:src-name COMPONENT={{.COMPONENT}}
+      PATH: "{{.COMPONENTS_ARTIFACTS_PATH}}/{{.KIND}}/{{.COMPONENT_PREFIX}}_{{.KIND}}_{{.COMPONENT}}_*"
     cmds:
-      - echo "Cleaning {{.COMPONENT}} contracts"
-      - rm -rf "{{.COMPONENTS_ARTIFACTS_PATH}}/{{.COMPONENT_PREFIX}}_{{.COMPONENT}}_*"
+      - echo "Cleaning {{.KIND}} {{.COMPONENT}} contracts from {{.PATH}}"
+      - rm -rf "{{.PATH}}"
 
   build-all:
     cmds:
-      - for: { var: ALL_COMPONENTS, parallel: true }
+      - for: { var: ALL_OPERATOR_COMPONENTS, parallel: true }
         task: build
         vars:
           COMPONENT: "{{.ITEM}}"
+          KIND: "operator"
+      - for: { var: ALL_AGGREGATOR_COMPONENTS, parallel: true }
+        task: build
+        vars:
+          COMPONENT: "{{.ITEM}}"
+          KIND: "aggregator"
 
   build:
     requires:
-      vars: [COMPONENT]
+      vars: [COMPONENT, KIND]
     vars:
       COMPONENT_SRC_NAME:
-        sh: task components:src-name COMPONENT={{.COMPONENT}}
-      COMPONENT_PATH: "packages/components/{{.COMPONENT}}"
+        sh: task components:src-name COMPONENT={{.COMPONENT}} KIND={{.KIND}}
+      COMPONENT_PATH: "packages/components/{{.KIND}}/{{.COMPONENT}}"
       COMPONENT_FILE: "{{.COMPONENT_SRC_NAME}}.wasm"
-      COMPONENT_PACKAGE: "tg-component-{{.COMPONENT}}"
+      COMPONENT_PACKAGE: "tg-component-{{.KIND}}-{{.COMPONENT}}"
     cmds:
-      - echo "Building component {{.COMPONENT}} at {{.COMPONENT_PATH}}"
+      - echo "Building {{.KIND}} component {{.COMPONENT}} at {{.COMPONENT_PATH}}"
       - cargo build --release --package {{.COMPONENT_PACKAGE}} --target wasm32-wasip2
       - mkdir -p "{{.COMPONENTS_ARTIFACTS_PATH}}"
       - cp "./target/wasm32-wasip2/release/{{.COMPONENT_FILE}}" "{{.COMPONENTS_ARTIFACTS_PATH}}/"
 
   src-name:
     requires:
-      vars: [COMPONENT]
+      vars: [COMPONENT, KIND]
     cmds:
-      - echo "{{.COMPONENT_PREFIX}}_{{ replace "-" "_" .COMPONENT }}"
+      - echo "{{.COMPONENT_PREFIX}}_{{.KIND}}_{{ replace "-" "_" .COMPONENT }}"
 
   ###################################################################
   ######################## WIT #####################################
@@ -60,62 +71,92 @@ tasks:
 
   clean-wit-all:
     cmds:
-      - for: { var: ALL_COMPONENTS }
+      - for: { var: ALL_OPERATOR_COMPONENTS }
         task: clean-wit
         vars:
           COMPONENT: "{{.ITEM}}"
+          KIND: "operator"
+
+      - for: { var: ALL_AGGREGATOR_COMPONENTS }
+        task: clean-wit
+        vars:
+          COMPONENT: "{{.ITEM}}"
+          KIND: "aggregator"
 
   clean-wit:
     requires:
-      vars: [COMPONENT]
+      vars: [COMPONENT, KIND]
     cmds:
-      - echo "Cleaning WIT for component {{.COMPONENT}}"
-      - rm -rf "./packages/components/{{.COMPONENT}}/wit"
+      - echo "Cleaning WIT for component {{.KIND}} {{.COMPONENT}}"
+      - rm -rf "./packages/components/{{.KIND}}/{{.COMPONENT}}/wit"
 
   fetch-wit-all:
     cmds:
-      - for: { var: ALL_COMPONENTS }
-        task: fetch-wit-{{.ITEM}}
-        vars:
-          COMPOMENT: "{{.ITEM}}"
+      - task: fetch-wit-operator-commander
+      - task: fetch-wit-operator-reporter
+      - task: fetch-wit-aggregator-messenger
+      - task: fetch-wit-aggregator-submitter
 
   fetch-wit:
     requires:
-      vars: [COMPONENT]
+      vars: [COMPONENT, KIND]
     cmds:
-      - task: fetch-wit-{{.COMPONENT}}
+      - task: fetch-wit-{{.KIND}}-{{.COMPONENT}}
 
-  fetch-wit-operator:
+  fetch-wit-operator-commander:
     internal: true
     cmds:
-      - for: { var: COMPONENT_WITS_OPERATOR }
+      - for: { var: COMPONENT_WITS_OPERATOR_COMMANDER }
         task: fetch-single-wit
         vars:
           WIT_ITEM: "{{.ITEM}}"
-          COMPONENT: "operator"
+          COMPONENT: "commander"
+          KIND: "operator"
 
-  fetch-wit-aggregator:
+  fetch-wit-operator-reporter:
     internal: true
     cmds:
-      - for: { var: COMPONENT_WITS_AGGREGATOR }
+      - for: { var: COMPONENT_WITS_OPERATOR_REPORTER }
         task: fetch-single-wit
         vars:
           WIT_ITEM: "{{.ITEM}}"
-          COMPONENT: "aggregator"
+          COMPONENT: "reporter"
+          KIND: "operator"
+
+  fetch-wit-aggregator-messenger:
+    internal: true
+    cmds:
+      - for: { var: COMPONENT_WITS_AGGREGATOR_MESSENGER }
+        task: fetch-single-wit
+        vars:
+          WIT_ITEM: "{{.ITEM}}"
+          COMPONENT: "messenger"
+          KIND: "aggregator"
+
+  fetch-wit-aggregator-submitter:
+    internal: true
+    cmds:
+      - for: { var: COMPONENT_WITS_AGGREGATOR_SUBMITTER }
+        task: fetch-single-wit
+        vars:
+          WIT_ITEM: "{{.ITEM}}"
+          COMPONENT: "submitter"
+          KIND: "aggregator"
 
   fetch-single-wit:
     internal: true
     requires:
-      vars: [WIT_ITEM, COMPONENT]
+      vars: [WIT_ITEM, COMPONENT, KIND]
     deps:
       - task: clean-wit
         vars:
           COMPONENT: "{{.COMPONENT}}"
+          KIND: "{{.KIND}}"
     cmds:
-      - echo "Fetching WIT for component {{.COMPONENT}} - {{.WIT_ITEM}}"
-      - mkdir -p "./packages/components/{{.COMPONENT}}/wit"
-      - wkg get "{{.WIT_ITEM}}" --output "./packages/components/{{.COMPONENT}}/wit/"
-      - wkg wit fetch -d "./packages/components/{{.COMPONENT}}/wit"
+      - echo "Fetching WIT for {{.KIND}} component {{.COMPONENT}} - {{.WIT_ITEM}}"
+      - mkdir -p "./packages/components/{{.KIND}}/{{.COMPONENT}}/wit"
+      - wkg get "{{.WIT_ITEM}}" --output "./packages/components/{{.KIND}}/{{.COMPONENT}}/wit/"
+      - wkg wit fetch -d "./packages/components/{{.KIND}}/{{.COMPONENT}}/wit"
       - echo "Completed fetch for {{.WIT_ITEM}}"
 
   ###################################################################

@@ -1,7 +1,9 @@
 [workspace]
 members = [
     "packages/contracts/*",
-    "packages/components/*",
+    "packages/components/operator/*",
+    "packages/components/aggregator/*",
+    "packages/components/shared",
     "packages/tests/*",
     "packages/utils",
     "packages/server",
@@ -36,6 +38,7 @@ tg-contract-api = { path = "packages/contracts/api" }
 tg-utils = { path = "packages/utils" }
 tg-test-common = { path = "packages/tests/_common" }
 tg-contract-payments = { path = "packages/contracts/payments" }
+tg-components-shared = { path = "packages/components/shared" }
 
 # WAVS
 wavs-types = { version = "=2.0.0-rc.3", default-features = false, features = [
