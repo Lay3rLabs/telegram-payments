@@ -8,6 +8,8 @@ pub type TgResult<T> = Result<T, TelegramBotError>;
 pub enum TelegramBotError {
     #[error("Unauthorized")]
     Unauthorized,
+    #[error("Message me `/start` to get started")]
+    NeedToStart,
     #[error("This command can only be used in direct messages")]
     DirectMessageOnly,
     #[error("Invalid group id")]
