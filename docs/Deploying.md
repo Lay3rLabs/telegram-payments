@@ -7,6 +7,7 @@ It's as easy as 1-2-3-4 to deploy everything locally>
 1. Build everything:
 
 ```bash
+task components:fetch-wit-all
 task build-all
 ```
 
