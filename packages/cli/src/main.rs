@@ -337,7 +337,7 @@ async fn main() {
             component_operator_reporter_cid_file,
             component_aggregator_messenger_cid_file,
             component_aggregator_submitter_cid_file,
-            telegram_group_id,
+            server_component_endpoint,
             cron_schedule,
             middleware_instantiation_file,
             aggregator_url,
@@ -493,14 +493,12 @@ async fn main() {
                 fuel_limit: None,
                 time_limit_seconds: None,
                 config: [(
-                    "TELEGRAM_GROUP_ID".to_string(),
-                    telegram_group_id.to_string(),
+                    "SERVER_ENDPOINT".to_string(),
+                    server_component_endpoint.to_string(),
                 )]
                 .into_iter()
                 .collect(),
-                env_keys: ["WAVS_ENV_AGGREGATOR_TELEGRAM_BOT_TOKEN".to_string()]
-                    .into_iter()
-                    .collect(),
+                env_keys: ["WAVS_ENV_SERVER_SECRET".to_string()].into_iter().collect(),
             };
 
             let submit_chain = Submit::Aggregator {
@@ -539,6 +537,17 @@ async fn main() {
                     event_type: tg_contract_api::payments::event::RegistrationEvent::EVENT_TYPE
                         .to_string(),
                 },
+                component: operator_reporter_component.clone(),
+                submit: submit_messenger.clone(),
+            };
+
+            let workflow_4 = Workflow {
+                trigger: Trigger::CosmosContractEvent {
+                    address: contract_payments.address.parse().unwrap(),
+                    chain: args.chain.clone(),
+                    event_type: tg_contract_api::payments::event::ConnectEvent::EVENT_TYPE
+                        .to_string(),
+                },
                 component: operator_reporter_component,
                 submit: submit_messenger,
             };
@@ -549,6 +558,7 @@ async fn main() {
                     ("workflow-1".parse().unwrap(), workflow_1),
                     ("workflow-2".parse().unwrap(), workflow_2),
                     ("workflow-3".parse().unwrap(), workflow_3),
+                    ("workflow-4".parse().unwrap(), workflow_4),
                 ]
                 .into_iter()
                 .collect(),

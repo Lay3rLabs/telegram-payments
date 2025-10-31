@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 tg-contract-api = { workspace = true }
 tg-utils = { workspace = true, features = ["binary"] }
+tg-components-shared = { workspace = true }
 wavs-types = { workspace = true }
 layer-climb = { workspace = true}
 axum = { workspace = true }

@@ -11,7 +11,11 @@ use tg_utils::tracing::tracing_init;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::{args::ServerArgs, handlers::tg_webhook::handle_tg_webhook, state::HttpState};
+use crate::{
+    args::ServerArgs,
+    handlers::{tg_component::handle_tg_component, tg_webhook::handle_tg_webhook},
+    state::HttpState,
+};
 
 const MAX_SIZE_MB: u64 = 50;
 
@@ -51,6 +55,7 @@ pub async fn make_router() -> anyhow::Result<axum::Router> {
     // public routes
     let router = axum::Router::new()
         .route("/telegram-webhook", post(handle_tg_webhook))
+        .route("/telegram-component", post(handle_tg_component))
         .with_state(state.clone());
 
     // apply global body size limit

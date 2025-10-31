@@ -5194,6 +5194,7 @@ dependencies = [
  "reqwest",
  "rustls",
  "serde_json",
+ "tg-components-shared",
  "tg-contract-api",
  "tg-utils",
  "thiserror 2.0.17",

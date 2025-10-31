@@ -4,7 +4,7 @@ use crate::state::{
 use cosmwasm_std::{ensure, AnyMsg, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint256};
 use layer_climb_proto::Any;
 use layer_climb_proto::{authz::MsgExec, bank::MsgSend, Coin as ProtoCoin, Message, Name};
-use tg_contract_api::payments::event::{RegistrationEvent, SendPaymentEvent};
+use tg_contract_api::payments::event::{ConnectEvent, RegistrationEvent, SendPaymentEvent};
 use tg_contract_api::payments::msg::{RegisterReceiveMsg, SendPaymentMsg, WavsPayload};
 use wavs_types::contracts::cosmwasm::service_manager::ServiceManagerQueryMessages;
 use wavs_types::contracts::cosmwasm::{
@@ -35,10 +35,10 @@ pub fn register_send(
 
     FUNDED_ACCOUNTS.save(deps.storage, &chain_addr, &tg_handle)?;
 
-    Ok(Response::new()
-        .add_attribute("method", "register_send")
-        .add_attribute("tg_handle", tg_handle)
-        .add_attribute("chain_addr", chain_addr))
+    Ok(Response::new().add_event(ConnectEvent {
+        tg_handle: tg_handle.clone(),
+        address: chain_addr.clone(),
+    }))
 }
 
 pub fn register_receive(

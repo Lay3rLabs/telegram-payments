@@ -3,7 +3,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::telegram::{
-    api::native::{TelegramMessage, TelegramUpdate, TelegramUser, TelegramWebHookInfo},
+    api::native::{
+        escape_markdown_v2, TelegramMessage, TelegramUpdate, TelegramUser, TelegramWebHookInfo,
+    },
     error::{TelegramBotError, TgResult},
 };
 
@@ -115,9 +117,12 @@ pub trait TelegramMessengerExt {
 
     async fn send_message(&self, chat_id: i64, text: &str) -> TgResult<TelegramMessage> {
         let mut params = HashMap::new();
+
+        let text = escape_markdown_v2(text);
+
         params.insert("chat_id".to_string(), chat_id.to_string());
         params.insert("text".to_string(), text.to_string());
-        params.insert("parse_mode".to_string(), "Markdown".to_string());
+        params.insert("parse_mode".to_string(), "MarkdownV2".to_string());
 
         self._make_request_params("sendMessage", params).await
     }
@@ -128,6 +133,9 @@ pub trait TelegramMessengerExt {
         params: HashMap<String, String>,
     ) -> TgResult<T> {
         let url = format!("https://api.telegram.org/bot{}/{}", self.token(), method);
+
+        println!("Sending to {url}");
+        println!("{:#?}", params);
 
         let res = self.fetch_params(&url, &params).await;
 

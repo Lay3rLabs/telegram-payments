@@ -1,9 +1,7 @@
 use anyhow::Result;
-use tg_components_shared::ReportEvent;
-use tg_contract_api::payments::event::{RegistrationEvent, SendPaymentEvent};
-use tg_utils::telegram::messenger::{
-    any_client::TelegramMessengerExt, wasi_client::TelegramMessenger,
-};
+use tg_components_shared::{ReportEvent, ReportEventRequest};
+use wavs_wasi_utils::http::http_request_post_json;
+use wstd::http::Client;
 
 wit_bindgen::generate!({
     world: "aggregator-world",
@@ -14,58 +12,40 @@ struct Component;
 
 impl Guest for Component {
     fn process_packet(packet: Packet) -> Result<Vec<AggregatorAction>, String> {
-        let bot_token = std::env::var("WAVS_ENV_AGGREGATOR_TELEGRAM_BOT_TOKEN").unwrap_or_default();
+        let secret = std::env::var("WAVS_ENV_SERVER_SECRET").unwrap_or_default();
 
-        if bot_token.is_empty() {
+        if secret.is_empty() {
             return Err(format!(
-                "BOT TOKEN is not set in WAVS_ENV_AGGREGATOR_TELEGRAM_BOT_TOKEN"
+                "secret is not set in WAVS_ENV_SERVER_SECRET environment variable"
             ));
         }
 
-        let group_id = host::config_var("TELEGRAM_GROUP_ID").unwrap_or_default();
+        let endpoint = host::config_var("SERVER_ENDPOINT").unwrap_or_default();
 
-        if group_id.is_empty() {
+        if endpoint.is_empty() {
             return Err(format!(
-                "TELEGRAM_GROUP_ID is not set in the component config"
+                "SERVER_ENDPOINT is not set in the component config"
             ));
         }
-
-        let group_id = group_id
-            .parse::<i64>()
-            .map_err(|e| format!("Failed to parse TELEGRAM_GROUP_ID: {}", e))?;
 
         let event: ReportEvent = serde_json::from_slice(&packet.envelope.payload)
             .map_err(|e| format!("Failed to deserialize packet payload: {}", e))?;
 
-        let text = match event {
-            ReportEvent::Registration(RegistrationEvent { tg_handle, address }) => {
-                format!(
-                    "New user registered!\nTelegram: @{}\nAddress: {}",
-                    tg_handle, address
-                )
-            }
+        let req = http_request_post_json(
+            &endpoint,
+            ReportEventRequest {
+                secret,
+                event_id: host::get_event_id(),
+                event: event.clone(),
+            },
+        )
+        .map_err(|s| s.to_string())?;
 
-            ReportEvent::SendPayment(SendPaymentEvent {
-                from_tg_handle,
-                to_tg_handle,
-                from_address,
-                to_address,
-                amount,
-                denom,
-            }) => {
-                format!("Payment sent!\nFrom: @{from_tg_handle} ({from_address})\nTo: @{to_tg_handle} ({to_address})\nAmount: {amount} {denom}")
-            }
-        };
-
-        let tg_messenger = TelegramMessenger::new(bot_token);
-
-        println!("Sending Telegram message to group {}: {}", group_id, text);
         wstd::runtime::block_on(async move {
-            tg_messenger
-                .send_message(group_id, &text)
-                .await
-                .map_err(|e| format!("Failed to send Telegram message: {}", e))
-        })?;
+            let client = Client::new();
+            client.send(req).await
+        })
+        .map_err(|s| s.to_string())?;
 
         Ok(Vec::new())
     }
