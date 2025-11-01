@@ -4,6 +4,7 @@ artifacts
 builds
 # secrets
 .env
+.env.*
 # backend binaries
 backend/bin
 # wit files (they're fetched from a registry

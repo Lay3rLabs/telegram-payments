@@ -30,7 +30,8 @@ vars:
   ARTIFACTS_PATH: '{{joinPath .REPO_ROOT "builds"}}'
   COMPONENTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "components"}}'
   CONTRACTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "contracts"}}'
-  CHAIN_KEY: "cosmos:pion-1"
+  CHAIN_KEY: "cosmos:neutron-1"
+  # CHAIN_KEY: "cosmos:pion-1"
   SERVER_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "server"}}'
   DEPLOYMENTS_ARTIFACTS_PATH: '{{joinPath .ARTIFACTS_PATH "deployments"}}'
   SERVER_PID_FILE: '{{joinPath .SERVER_ARTIFACTS_PATH "server.pid"}}'
@@ -51,6 +52,8 @@ vars:
   IPFS_API_PORT: 8300
   IPFS_GATEWAY_PORT: 8301
   SERVER_PORT: 8443
+  NGROK_URL: "https://sublacustrine-flusteredly-lavonna.ngrok-free.dev"
+  SERVER_TELEGRAM_WEBHOOK_SECRET: "ZO43emhLlGPwxut1"
 
   DOCKER_SUDO:
     sh: |
@@ -66,3 +69,4 @@ vars:
   JAEGER_DOCKER_IMAGE: "jaegertracing/jaeger:2.5.0"
   PROMETHEUS_DOCKER_IMAGE: "prom/prometheus:v3.3.0"
   IPFS_DOCKER_IMAGE: "ipfs/kubo:v0.38.1"
+

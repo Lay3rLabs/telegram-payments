@@ -24,8 +24,6 @@ send - Initiate a transfer to another telegram user
 help - Get help and usage information
 ```
 
-`setjoingroups` - Disable (for now until we test it)
-
 `/newapp` to create a mini-app for this bot
 
 Point to URL you deployed the backend to
