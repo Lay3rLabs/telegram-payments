@@ -5,6 +5,23 @@ tasks:
     cmds:
       - rm -rf "{{.DEPLOYMENTS_ARTIFACTS_PATH}}"
 
+  # edit here to run a few steps 
+  patch:
+    cmds:
+      - task: aggregator-register-service
+        vars:
+          ADDR:
+            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+      - task: operator-add-service
+        vars:
+          ADDR:
+            sh: cat "{{.DEPLOYMENTS_ARTIFACTS_PATH}}/service-cid.json" | jq -r '.service.manager.cosmos.address'
+      - task: operator-set-signing-key
+        vars:
+          WEIGHT: "{{.WEIGHT | default .DEFAULT_MIDDLEWARE_SIGNER_WEIGHT}}"
+          FILENAME: "operator-signing-key.json"
+
+
   ###################################################################
   ######################## ALL  #####################################
   ###################################################################

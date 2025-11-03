@@ -144,7 +144,11 @@ impl TryFrom<&TelegramMessage> for TelegramWavsCommand {
         let (prefix, parts) = match message.text.clone() {
             Some(text) => {
                 let mut iter = text.split_whitespace();
-                let prefix = iter.next().ok_or(TelegramBotError::BadCommand)?;
+                let mut prefix = iter.next().ok_or(TelegramBotError::BadCommand)?;
+                // Remove any @BotName suffix
+                if let Some(idx) = prefix.find('@') {
+                    prefix = &prefix[..idx];
+                }
                 let prefix = if prefix == "/admin" {
                     let next = iter.next().ok_or(TelegramBotError::BadCommand)?;
                     TelegramWavsCommandPrefix::from_str(&format!("{} {}", prefix, next))?

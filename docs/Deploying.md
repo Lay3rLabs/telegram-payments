@@ -4,11 +4,27 @@ See [GettingStarted.md](./GettingStarted.md) for initial setup instructions.
 
 It's as easy as 1-2-3-4 to deploy everything locally>
 
+0. Prepare configuration
+
+You need to setup the env files. Start with the template:
+
+```bash
+cp .example.env .env 
+```
+
+Fill in all MNEMONIC with unique keys. And make sure to fund `CLI_MNEMONIC` and `WAVS_AGGREGATOR_COSMOS_CREDENTIAL`.
+You can generate new keys with Keplr. For random characters (secrets, salts), you can use this:
+
+`dd if=/dev/random count=1 bs=12 2>/dev/null | base64`
+
 1. Build everything:
 
 ```bash
+task components:fetch-wit-all
 task build-all
 ```
+
+And use telegram to fill out the rest of the fields. See [BotSetup.md](./BotSetup.md)
 
 2. Start the backend
 

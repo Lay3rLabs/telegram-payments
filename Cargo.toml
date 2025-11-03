@@ -9,6 +9,10 @@ members = [
     "packages/server",
     "packages/cli",
 ]
+exclude = [
+    "packages/components/operator/wit",
+    "packages/components/aggregator/wit",
+]
 
 resolver = "2"
 
